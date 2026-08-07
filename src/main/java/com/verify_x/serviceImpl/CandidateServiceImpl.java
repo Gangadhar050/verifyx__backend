@@ -48,6 +48,7 @@ public class CandidateServiceImpl implements CandidateService {
                 .technicalSkills(candidate.getTechnicalSkills() == null
                         ? new ArrayList<>()
                         : new ArrayList<>(candidate.getTechnicalSkills()))
+
                 .build();
     }
 

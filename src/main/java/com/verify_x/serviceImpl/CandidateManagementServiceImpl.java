@@ -370,12 +370,7 @@ public List<CandidateSummaryDto> getAllCandidates() {
         candidate.setRemarks(dto.getRemarks());
         candidateRepository.save(candidate);
 
-        /*
-         * Send Email
-         */
 
-        // Status persistence must not fail just because SMTP is not configured or
-        // the mail provider is temporarily unavailable. Email is best-effort.
         try {
             switch (dto.getStatus()) {
                 case APPROVED -> emailService.sendApplicationApprovedEmail(
