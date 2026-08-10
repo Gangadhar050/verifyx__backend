@@ -65,10 +65,21 @@ public class AuthController {
         );
     }
 
-    /**
-     * Logout
-     * JWT logout is handled by blacklisting the token.
-     */
+    @PostMapping("/verify-registration-otp")
+    public ResponseEntity<ApiResponse<String>> verifyRegistrationOtp(
+            @Valid @RequestBody VerifyOtpRequestDto request) {
+
+        String response = authService.verifyRegistrationOtp(request);
+
+        return ResponseEntity.ok(
+                ApiResponse.<String>builder()
+                        .success(true)
+                        .message("OTP verification successful.")
+                        .data(response)
+                        .build()
+        );
+    }
+
     @PostMapping("/candidateLogout")
     public ResponseEntity<ApiResponse<String>> logout(
             @RequestHeader("Authorization") String authHeader) {
@@ -93,15 +104,7 @@ return  ResponseEntity.ok(
                         .success(true)
                         .message("Admin login successful.")
                         .data(authService.adminLogin(request))
-                        .build()
-        );
-//        return ResponseEntity.ok(
-//                ApiResponse.<LoginResponseDto>builder()
-//                        .success(true)
-//                        .message("Admin login successful.")
-//                        .data(authService.adminLogin(request))
-//                        .build()
-//        );
+                        .build());
     }
     @PostMapping("/hrLogout")
     public ResponseEntity<ApiResponse<String>> adminLogout(

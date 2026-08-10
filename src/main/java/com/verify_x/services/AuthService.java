@@ -17,6 +17,11 @@ public interface AuthService {
 
         void adminLogout(String token);
 
+        String verifyRegistrationOtp(VerifyOtpRequestDto request);
+
+//                void sendOtp(String email, String otp);
+//
+//        void sendOtp(String phoneNumber, String otp);
     }
 
 
