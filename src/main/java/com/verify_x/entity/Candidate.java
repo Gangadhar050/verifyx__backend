@@ -105,5 +105,23 @@ public class Candidate {
             orphanRemoval = true
     )
     private Education education;
+    //otp
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean emailVerified = false;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean mobileVerified = false;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean enabled = false;
+
+    private String emailOtpHash;
+
+    private String mobileOtpHash;
+
+    private LocalDateTime otpExpiresAt;
 }
 

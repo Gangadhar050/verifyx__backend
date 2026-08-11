@@ -2,7 +2,6 @@ package com.verify_x.jwt;
 
 import com.verify_x.entity.Admin;
 import com.verify_x.entity.Candidate;
-//import com.verify_x.entity.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;

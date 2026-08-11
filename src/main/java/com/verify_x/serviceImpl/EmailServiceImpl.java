@@ -16,6 +16,8 @@ import org.springframework.stereotype.Service;
 public class EmailServiceImpl implements EmailService {
 
     private final JavaMailSender mailSender;
+//    @Value("${spring.mail.username}")
+//    private String fromEmail;
 
     @Value("${spring.mail.username}")
     private String fromEmail;
@@ -162,4 +164,36 @@ public class EmailServiceImpl implements EmailService {
             );
         }
     }
+
+    @Override
+    public void sendOtp(String email, String otp) {
+
+        String subject = "VerifyX | OTP Verification";
+
+        String body = """
+                <html>
+                <body>
+
+                <h2>Hello,</h2>
+
+                <p>Your OTP for VerifyX is:</p>
+
+                <h3>%s</h3>
+
+                <br>
+
+                <p>Please use this OTP to complete your verification process.</p>
+
+                <br>
+
+                <b>VerifyX Team</b>
+
+                </body>
+                </html>
+                """
+                .formatted(otp);
+
+        sendHtmlMail(email, subject, body);
+    }
+
 }

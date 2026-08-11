@@ -19,5 +19,5 @@ public interface EmailService {
             String candidateName,
             String remarks
     );
-
+    void sendOtp(String email, String otp);
 }

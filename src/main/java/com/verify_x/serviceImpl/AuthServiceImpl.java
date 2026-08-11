@@ -14,6 +14,8 @@ import com.verify_x.repository.CandidateRepository;
 import com.verify_x.services.AuthService;
 //import com.verify_x.services.UserProfileService;
 import com.verify_x.services.CandidateService;
+import com.verify_x.services.EmailService;
+import com.verify_x.services.SmsService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +27,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.security.SecureRandom;
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -40,11 +45,13 @@ public class AuthServiceImpl implements AuthService {
     private final CandidateService candidateService;
     private final AdminRepository adminRepository;
     private final TokenBlacklist tokenBlacklist;
+    private final EmailService emailService;
+    private final SmsService smsService;
 
     @Override
     public String register(UserRegistrationDto dto) {
 
-        log.info("Registering user : {}", dto.getEmail());
+        log.info("Registering user: {}", dto.getEmail());
 
         if (candidateRepository.existsByEmail(dto.getEmail())) {
             throw new EmailAlreadyExistsException("Email already exists.");
@@ -54,6 +61,9 @@ public class AuthServiceImpl implements AuthService {
             throw new UserAlreadyExistsException("Phone number already exists.");
         }
 
+        // Generate both OTPs before saving the candidate.
+        String emailOtp = generateOtp();
+        String mobileOtp = generateOtp();
 
         Candidate user = Candidate.builder()
                 .username(dto.getUsername())
@@ -63,18 +73,40 @@ public class AuthServiceImpl implements AuthService {
                 .appliedRole(dto.getAppliedRole())
                 .candidateType(dto.getCandidateType())
                 .role(Role.CANDIDATE)
+                .emailVerified(false)
+                .mobileVerified(false)
+                .enabled(false)
+                .emailOtpHash(passwordEncoder.encode(emailOtp))
+                .mobileOtpHash(passwordEncoder.encode(mobileOtp))
+                .otpExpiresAt(LocalDateTime.now().plusMinutes(10))
                 .build();
 
         Candidate savedUser = candidateRepository.save(user);
 
-          candidateService.saveCandidateProfile(savedUser);
-        log.info("User registered successfully : {}", savedUser.getId());
+        emailService.sendOtp(savedUser.getEmail(), emailOtp);
 
-        return "Registration Successful";
+        // Free development SMS service logs this OTP in the console.
+        smsService.sendOtp("+91" + savedUser.getPhoneNumber(), mobileOtp);
+
+        log.info("Email and mobile OTP sent to candidate: {}", savedUser.getId());
+
+        return "OTP sent to email and mobile number. Verify both OTPs to complete registration.";
     }
-
     @Override
     public LoginResponseDto login(LoginRequestDto dto) {
+
+        Candidate user = candidateRepository.findByEmail(dto.getEmail())
+                .orElseThrow(() ->
+                        new BadCredentialsException("Invalid email or password."));
+
+        if (!user.isEnabled() ||
+                !user.isEmailVerified() ||
+                !user.isMobileVerified()) {
+
+            throw new BadCredentialsException(
+                    "Verify email and mobile OTP before logging in."
+            );
+        }
 
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
@@ -82,9 +114,6 @@ public class AuthServiceImpl implements AuthService {
                         dto.getPassword()
                 )
         );
-
-        Candidate user = candidateRepository.findByEmail(dto.getEmail())
-                .orElseThrow();
 
         String token = jwtService.generateToken(user);
 
@@ -97,6 +126,63 @@ public class AuthServiceImpl implements AuthService {
                 .role(user.getRole())
                 .candidateType(user.getCandidateType())
                 .build();
+    }
+
+    @Override
+    public String verifyRegistrationOtp(VerifyOtpRequestDto request) {
+
+        Candidate user = candidateRepository.findByEmail(request.getEmail())
+                .orElseThrow(() ->
+                        new UsernameNotFoundException("Candidate not found."));
+
+        if (user.isEnabled()) {
+            throw new BadCredentialsException("Candidate is already verified.");
+        }
+
+        if (user.getOtpExpiresAt() == null ||
+                user.getOtpExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new BadCredentialsException(
+                    "OTP has expired. Please register again."
+            );
+        }
+
+        boolean isEmailOtpValid =
+                user.getEmailOtpHash() != null &&
+                        passwordEncoder.matches(
+                                request.getEmailOtp(),
+                                user.getEmailOtpHash()
+                        );
+
+        boolean isMobileOtpValid =
+                user.getMobileOtpHash() != null &&
+                        passwordEncoder.matches(
+                                request.getMobileOtp(),
+                                user.getMobileOtpHash()
+                        );
+
+        if (!isEmailOtpValid || !isMobileOtpValid) {
+            throw new BadCredentialsException(
+                    "Invalid email OTP or mobile OTP."
+            );
+        }
+
+        user.setEmailVerified(true);
+        user.setMobileVerified(true);
+        user.setEnabled(true);
+
+        // Prevent the OTP being reused.
+        user.setEmailOtpHash(null);
+        user.setMobileOtpHash(null);
+        user.setOtpExpiresAt(null);
+
+        Candidate verifiedUser = candidateRepository.save(user);
+
+        // Create the blank profile only after successful verification.
+        candidateService.saveCandidateProfile(verifiedUser);
+
+        log.info("Candidate OTP verified successfully: {}", verifiedUser.getId());
+
+        return "Registration verified successfully. Please log in.";
     }
 
     @Override
@@ -176,6 +262,8 @@ public class AuthServiceImpl implements AuthService {
         log.info("User logged out successfully.");
     }
 
-
+    private String generateOtp() {
+        return String.format("%06d", new SecureRandom().nextInt(1_000_000));
+    }
 
 }
