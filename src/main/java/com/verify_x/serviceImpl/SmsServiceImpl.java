@@ -1,13 +1,15 @@
 package com.verify_x.serviceImpl;
 
 import com.twilio.Twilio;
-import com.twilio.rest.api.v2010.account.Message;
-import com.twilio.type.PhoneNumber;
+import com.twilio.rest.verify.v2.service.Verification;
+import com.twilio.rest.verify.v2.service.VerificationCheck;
 import com.verify_x.services.SmsService;
 import jakarta.annotation.PostConstruct;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+@Slf4j
 @Service
 public class SmsServiceImpl implements SmsService {
 
@@ -17,8 +19,8 @@ public class SmsServiceImpl implements SmsService {
     @Value("${twilio.auth-token}")
     private String authToken;
 
-    @Value("${twilio.phone-number}")
-    private String twilioPhoneNumber;
+//    @Value("${twilio.verify-service-sid}")
+//    private String verifyServiceSid;
 
     @PostConstruct
     public void initializeTwilio() {
@@ -26,23 +28,22 @@ public class SmsServiceImpl implements SmsService {
     }
 
     @Override
-    public void sendOtp(String phoneNumber) {
-
-    }
-
-    @Override
-    public boolean verifyOtp(String phoneNumber, String otp) {
-        return false;
-    }
-
-    @Override
     public void sendOtp(String phoneNumber, String otp) {
 
-        Message.creator(
-                new PhoneNumber(phoneNumber),
-                new PhoneNumber(twilioPhoneNumber),
-                "Your VerifyX mobile OTP is: " + otp +
-                        ". It expires in 10 minutes. Do not share it."
-        ).create();
+    log.info("DEV ONLY — mobile OTP for {} is: {}", phoneNumber, otp);
+
     }
+
+//    @Override
+//    public boolean verifyOtp(String phoneNumber, String otp) {
+//
+//        VerificationCheck verificationCheck =
+//                VerificationCheck.creator(
+//                        verifyServiceSid
+//                ).create();
+//
+//        return "approved".equalsIgnoreCase(
+//                verificationCheck.getStatus()
+//        );
+//    }
 }

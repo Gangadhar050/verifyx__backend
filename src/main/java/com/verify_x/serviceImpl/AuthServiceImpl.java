@@ -47,52 +47,51 @@ public class AuthServiceImpl implements AuthService {
     private final TokenBlacklist tokenBlacklist;
     private final EmailService emailService;
     private final SmsService smsService;
-@Override
-public String register(UserRegistrationDto dto) {
 
-    log.info("Registering user: {}", dto.getEmail());
+    @Override
+    public String register(UserRegistrationDto dto) {
 
-    if (candidateRepository.existsByEmail(dto.getEmail())) {
-        throw new EmailAlreadyExistsException("Email already exists.");
+        log.info("Registering user: {}", dto.getEmail());
+
+        if (candidateRepository.existsByEmail(dto.getEmail())) {
+            throw new EmailAlreadyExistsException("Email already exists.");
+        }
+
+        if (candidateRepository.existsByPhoneNumber(dto.getPhoneNumber())) {
+            throw new UserAlreadyExistsException("Phone number already exists.");
+        }
+
+        // Generate both OTPs before saving the candidate.
+        String emailOtp = generateOtp();
+        String mobileOtp = generateOtp();
+
+        Candidate user = Candidate.builder()
+                .username(dto.getUsername())
+                .email(dto.getEmail())
+                .phoneNumber(dto.getPhoneNumber())
+                .password(passwordEncoder.encode(dto.getPassword()))
+                .appliedRole(dto.getAppliedRole())
+                .candidateType(dto.getCandidateType())
+                .role(Role.CANDIDATE)
+                .emailVerified(false)
+                .mobileVerified(false)
+                .enabled(false)
+                .emailOtpHash(passwordEncoder.encode(emailOtp))
+                .mobileOtpHash(passwordEncoder.encode(mobileOtp))
+                .otpExpiresAt(LocalDateTime.now().plusMinutes(10))
+                .build();
+
+        Candidate savedUser = candidateRepository.save(user);
+
+        emailService.sendOtp(savedUser.getEmail(), emailOtp);
+
+        // Free development SMS service logs this OTP in the console.
+        smsService.sendOtp("+91" + savedUser.getPhoneNumber(), mobileOtp);
+
+        log.info("Email and mobile OTP sent to candidate: {}", savedUser.getId());
+
+        return "OTP sent to email and mobile number. Verify both OTPs to complete registration.";
     }
-
-    if (candidateRepository.existsByPhoneNumber(dto.getPhoneNumber())) {
-        throw new UserAlreadyExistsException("Phone number already exists.");
-    }
-
-    String emailOtp = generateOtp();
-    String mobileOtp = generateOtp();
-
-    Candidate user = Candidate.builder()
-            .username(dto.getUsername())
-            .email(dto.getEmail())
-            .phoneNumber(dto.getPhoneNumber())
-            .password(passwordEncoder.encode(dto.getPassword()))
-            .appliedRole(dto.getAppliedRole())
-            .candidateType(dto.getCandidateType())
-            .role(Role.CANDIDATE)
-
-            .emailVerified(false)
-            .mobileVerified(false)
-            .enabled(false)
-
-            .emailOtpHash(passwordEncoder.encode(emailOtp))
-            .mobileOtpHash(passwordEncoder.encode(mobileOtp))
-            .otpExpiresAt(LocalDateTime.now().plusMinutes(10))
-            .build();
-
-    Candidate savedUser = candidateRepository.save(user);
-
-    emailService.sendOtp(savedUser.getEmail(), emailOtp);
-
-    // Your DTO accepts a 10-digit Indian number.
-    smsService.sendOtp("+91" + savedUser.getPhoneNumber(), mobileOtp);
-
-    log.info("Email and mobile OTP sent to candidate: {}", savedUser.getId());
-
-    return "OTP sent to email and mobile number. Verify both OTPs to complete registration.";
-}
-
     @Override
     public LoginResponseDto login(LoginRequestDto dto) {
 
@@ -128,6 +127,7 @@ public String register(UserRegistrationDto dto) {
                 .candidateType(user.getCandidateType())
                 .build();
     }
+
     @Override
     public String verifyRegistrationOtp(VerifyOtpRequestDto request) {
 
