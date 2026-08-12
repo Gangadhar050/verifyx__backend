@@ -45,6 +45,7 @@ public class SecurityConfig {
                                 "/api/auth/candidateLogin",
                                 "/api/auth/candidateLogout",
                                 "/api/test/**",
+                                "/api/auth/verify-registration-otp",
                                 "/h2-console/**"
                                 ).permitAll()
                                 .requestMatchers("/api/auth/hrLogin").permitAll()

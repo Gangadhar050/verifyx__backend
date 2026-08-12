@@ -4,8 +4,9 @@ import com.verify_x.dto.*;
 
 public interface AuthService {
 
-
         String register(UserRegistrationDto registrationDto);
+
+        String verifyRegistrationOtp(VerifyOtpRequestDto request);
 
         LoginResponseDto login(LoginRequestDto loginRequest);
 
@@ -16,12 +17,4 @@ public interface AuthService {
         HrLoginResponseDto adminLogin(AdminLoginRequestDto request);
 
         void adminLogout(String token);
-
-        String verifyRegistrationOtp(VerifyOtpRequestDto request);
-
-//                void sendOtp(String email, String otp);
-//
-//        void sendOtp(String phoneNumber, String otp);
-    }
-
-
+}
