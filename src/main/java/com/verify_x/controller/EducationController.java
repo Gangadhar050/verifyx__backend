@@ -14,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Arrays;
 import java.util.List;
@@ -139,22 +140,7 @@ public class EducationController {
         );
     }
 
-//    /**
-//     * Get all available technical skills
-//     */
-//    @GetMapping("/technical-skills")
-//    @PreAuthorize("hasRole('CANDIDATE')")
-//    public ResponseEntity<ApiResponse<List<TechnicalSkill>>> getTechnicalSkills() {
-//
-//        return ResponseEntity.ok(
-//
-//                ApiResponse.<List<TechnicalSkill>>builder()
-//                        .success(true)
-//                        .message("Technical skills fetched successfully.")
-//                        .data(Arrays.asList(TechnicalSkill.values()))
-//                        .build()
-//        );
-//    }
+
     @GetMapping("/technical-skills")
     @PreAuthorize("hasRole('CANDIDATE') or hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<List<TechnicalSkill>>> getTechnicalSkills() {
@@ -165,5 +151,27 @@ public class EducationController {
                         .message("Candidate technical skills fetched successfully.")
                         .data(educationService.getMyTechnicalSkills())
                         .build());
+    }
+    /**
+     * Extract text from education document using AWS Textract
+     */
+    @PostMapping(
+            value = "/extract-text",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    @PreAuthorize("hasRole('CANDIDATE')")
+    public ResponseEntity<ApiResponse<String>> extractEducationText(
+            @RequestParam("file") MultipartFile file) {
+
+        String extractedText =
+                educationService.extractEducationText(file);
+
+        return ResponseEntity.ok(
+                ApiResponse.<String>builder()
+                        .success(true)
+                        .message("Education document text extracted successfully.")
+                        .data(extractedText)
+                        .build()
+        );
     }
 }

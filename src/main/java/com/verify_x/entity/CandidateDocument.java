@@ -25,7 +25,7 @@ public class CandidateDocument {
     @JoinColumn(name = "candidate_id", nullable = false)
     private Candidate candidate;
 
-    // Resume / PAN / Offer Letter...
+    // Resume / PAN / Offer Letter
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private DocumentType documentType;
@@ -34,13 +34,18 @@ public class CandidateDocument {
     @Column(nullable = false)
     private String fileName;
 
+    // File MIME type
     private String contentType;
 
+    // Actual uploaded document
     @Lob
-    @Column(name = "document_data")
+    @Column(
+        name = "document_data",
+        columnDefinition = "LONGBLOB"
+    )
     private byte[] documentData;
 
-    // Verification Status
+    // Verification status
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
@@ -59,8 +64,9 @@ public class CandidateDocument {
 
     @PrePersist
     public void prePersist() {
-        uploadedAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now();
+        uploadedAt = now;
+        updatedAt = now;
     }
 
     @PreUpdate

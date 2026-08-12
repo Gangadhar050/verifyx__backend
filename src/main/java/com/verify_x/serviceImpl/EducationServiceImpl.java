@@ -412,4 +412,10 @@ public class EducationServiceImpl implements EducationService {
 
         return new ArrayList<>(candidate.getTechnicalSkills());
     }
+
+	@Override
+	public String extractEducationText(MultipartFile file) {
+		// TODO Auto-generated method stub
+		return null;
+	}
 }
