@@ -36,17 +36,26 @@ public class SecurityConfig {
                 )
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/swagger-ui/**",
-                                "/swagger-ui.html",
-                                "/v3/api-docs/**",
-                                "/v3/api-docs",
-                                "/v3/api-docs/swagger-config",
-                                "/api/auth/candidateRegister",
-                                "/api/auth/candidateLogin",
-                                "/api/auth/candidateLogout",
-                                "/api/test/**",
-                                "/h2-console/**"
-                                ).permitAll()
+                		.requestMatchers(
+                		        "/swagger-ui/**",
+                		        "/swagger-ui.html",
+                		        "/v3/api-docs/**",
+                		        "/v3/api-docs",
+                		        "/v3/api-docs/swagger-config",
+
+                		        "/api/auth/candidateRegister",
+                		        "/api/auth/candidateLogin",
+                		        "/api/auth/candidateLogout",
+                		        "/api/auth/verify-registration-otp",
+
+                		        "/api/roles/**",
+                		        "/api/skills/**",
+                		        "/api/technologies/**",
+
+                		        "/api/test/**",
+                		        "/h2-console/**"
+                		).permitAll()
+                                .requestMatchers("/api/skills/**").permitAll()
                                 .requestMatchers("/api/auth/hrLogin").permitAll()
                                 .requestMatchers("/api/auth/hrLogout").hasRole("ADMIN")
                                 .requestMatchers("/api/education/hr/**").hasRole("ADMIN")
