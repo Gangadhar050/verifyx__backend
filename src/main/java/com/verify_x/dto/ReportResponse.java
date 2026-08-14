@@ -1,6 +1,7 @@
 package com.verify_x.dto;
 
 import lombok.AllArgsConstructor;
+import com.verify_x.entity.Candidate;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -17,8 +18,7 @@ public class ReportResponse {
     private String fullName;
     private String candidateType;
     private String status;
-    private String appliedRole;
-
+    private Candidate.AppliedRole appliedRole;
     private String email;
     private String phoneNumber;
 

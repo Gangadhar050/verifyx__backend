@@ -1,5 +1,6 @@
 package com.verify_x.dto;
 
+import com.verify_x.entity.Candidate;
 import com.verify_x.enums.CandidateType;
 import com.verify_x.enums.TechnicalSkill;
 import jakarta.validation.constraints.Email;
@@ -45,12 +46,11 @@ public class CandidateProfileDto {
     )
     private String aadhaarNumber;
 
-    @NotBlank(message = "Applied Role is required")
-    private String appliedRole;
+    @NotNull(message = "Applied Role is required")
+    private Candidate.AppliedRole appliedRole;
 
     @NotNull(message = "Candidate Type is required")
     private CandidateType candidateType;
 
     private List<TechnicalSkill> technicalSkills;
-
 }

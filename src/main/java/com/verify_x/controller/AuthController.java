@@ -3,11 +3,17 @@ package com.verify_x.controller;
 import com.verify_x.dto.*;
 import com.verify_x.payload.ApiResponse;
 import com.verify_x.services.AuthService;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
+import org.springdoc.core.annotations.ParameterObject;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+
 import org.springframework.security.authentication.BadCredentialsException;
+
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -18,31 +24,45 @@ public class AuthController {
 
     private final AuthService authService;
 
-    /**
-     * Candidate Registration
-     */
-    @PostMapping("candidateRegister")
+
+    // =========================================================
+    // CANDIDATE REGISTRATION
+    // =========================================================
+
+    @PostMapping("/candidateRegister")
     public ResponseEntity<ApiResponse<String>> registerUser(
-            @Valid @RequestBody UserRegistrationDto registrationDto) {
+
+            @Valid
+            @ParameterObject
+            @ModelAttribute
+            UserRegistrationDto registrationDto) {
 
         String response = authService.register(registrationDto);
 
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.<String>builder()
-                        .success(true)
-                        .message("User registered successfully.")
-                        .data(response)
-                        .build());
+                .body(
+                        ApiResponse.<String>builder()
+                                .success(true)
+                                .message("User registered successfully.")
+                                .data(response)
+                                .build()
+                );
     }
 
-    /**
-     * User Login
-     */
+
+    // =========================================================
+    // CANDIDATE LOGIN
+    // =========================================================
+
     @PostMapping("/candidateLogin")
     public ResponseEntity<ApiResponse<LoginResponseDto>> login(
-            @Valid @RequestBody LoginRequestDto loginRequestDto) {
 
-        LoginResponseDto response = authService.login(loginRequestDto);
+            @Valid
+            @RequestBody
+            LoginRequestDto loginRequestDto) {
+
+        LoginResponseDto response =
+                authService.login(loginRequestDto);
 
         return ResponseEntity.ok(
                 ApiResponse.<LoginResponseDto>builder()
@@ -52,6 +72,11 @@ public class AuthController {
                         .build()
         );
     }
+
+
+    // =========================================================
+    // CURRENT USER
+    // =========================================================
 
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<CurrentUserDto>> currentUser() {
@@ -65,11 +90,20 @@ public class AuthController {
         );
     }
 
+
+    // =========================================================
+    // VERIFY REGISTRATION OTP
+    // =========================================================
+
     @PostMapping("/verify-registration-otp")
     public ResponseEntity<ApiResponse<String>> verifyRegistrationOtp(
-            @Valid @RequestBody VerifyOtpRequestDto request) {
 
-        String response = authService.verifyRegistrationOtp(request);
+            @Valid
+            @RequestBody
+            VerifyOtpRequestDto request) {
+
+        String response =
+                authService.verifyRegistrationOtp(request);
 
         return ResponseEntity.ok(
                 ApiResponse.<String>builder()
@@ -80,11 +114,19 @@ public class AuthController {
         );
     }
 
+
+    // =========================================================
+    // CANDIDATE LOGOUT
+    // =========================================================
+
     @PostMapping("/candidateLogout")
     public ResponseEntity<ApiResponse<String>> logout(
-            @RequestHeader("Authorization") String authHeader) {
 
-        String token = authHeader.replace("Bearer ", "");
+            @RequestHeader("Authorization")
+            String authHeader) {
+
+        String token =
+                authHeader.replace("Bearer ", "");
 
         authService.logout(token);
 
@@ -96,25 +138,49 @@ public class AuthController {
                         .build()
         );
     }
+
+
+    // =========================================================
+    // HR LOGIN
+    // =========================================================
+
     @PostMapping("/hrLogin")
     public ResponseEntity<ApiResponse<HrLoginResponseDto>> adminLogin(
-            @Valid @RequestBody AdminLoginRequestDto request) {
-return  ResponseEntity.ok(
+
+            @Valid
+            @RequestBody
+            AdminLoginRequestDto request) {
+
+        return ResponseEntity.ok(
                 ApiResponse.<HrLoginResponseDto>builder()
                         .success(true)
                         .message("Admin login successful.")
                         .data(authService.adminLogin(request))
-                        .build());
+                        .build()
+        );
     }
+
+
+    // =========================================================
+    // HR LOGOUT
+    // =========================================================
+
     @PostMapping("/hrLogout")
     public ResponseEntity<ApiResponse<String>> adminLogout(
-            @RequestHeader("Authorization") String authHeader) {
 
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            throw new BadCredentialsException("Invalid Authorization header.");
+            @RequestHeader("Authorization")
+            String authHeader) {
+
+        if (authHeader == null ||
+                !authHeader.startsWith("Bearer ")) {
+
+            throw new BadCredentialsException(
+                    "Invalid Authorization header."
+            );
         }
 
-        String token = authHeader.substring(7);
+        String token =
+                authHeader.substring(7);
 
         authService.adminLogout(token);
 

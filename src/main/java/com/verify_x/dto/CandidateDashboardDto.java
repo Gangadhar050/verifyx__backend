@@ -1,5 +1,6 @@
 package com.verify_x.dto;
 
+import com.verify_x.entity.Candidate;
 import com.verify_x.enums.CandidateType;
 import lombok.*;
 
@@ -19,7 +20,7 @@ public class CandidateDashboardDto {
 
     private String phoneNumber;
 
-    private String appliedRole;
+    private Candidate.AppliedRole appliedRole;
 
     private CandidateType candidateType;
 

@@ -1,5 +1,6 @@
 package com.verify_x.dto;
 
+import com.verify_x.entity.Candidate;
 import com.verify_x.enums.CandidateType;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -16,7 +17,11 @@ import lombok.*;
 public class UserRegistrationDto {
 
     @NotBlank(message = "Full name is required")
-    @Size(min = 3, max = 100, message = "Full name must be between 3 and 100 characters")
+    @Size(
+            min = 3,
+            max = 100,
+            message = "Full name must be between 3 and 100 characters"
+    )
     private String username;
 
     @NotBlank(message = "Email is required")
@@ -39,11 +44,17 @@ public class UserRegistrationDto {
     )
     private String password;
 
-    @NotBlank(message = "Applied role is required")
-    @Size(max = 100)
-    private String appliedRole;
+    // ===============================
+    // APPLIED ROLE
+    // ===============================
+
+    @NotNull(message = "Applied role is required")
+    private Candidate.AppliedRole appliedRole;
+
+    // ===============================
+    // CANDIDATE TYPE
+    // ===============================
 
     @NotNull(message = "Candidate type is required")
     private CandidateType candidateType;
-
 }

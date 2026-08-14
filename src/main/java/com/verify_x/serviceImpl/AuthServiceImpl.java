@@ -12,7 +12,6 @@ import com.verify_x.jwt.UserPrincipal;
 import com.verify_x.repository.AdminRepository;
 import com.verify_x.repository.CandidateRepository;
 import com.verify_x.services.AuthService;
-//import com.verify_x.services.UserProfileService;
 import com.verify_x.services.CandidateService;
 import com.verify_x.services.EmailService;
 import com.verify_x.services.SmsService;
@@ -37,7 +36,6 @@ import java.time.LocalDateTime;
 @Slf4j
 public class AuthServiceImpl implements AuthService {
 
-
     private final CandidateRepository candidateRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
@@ -48,20 +46,29 @@ public class AuthServiceImpl implements AuthService {
     private final EmailService emailService;
     private final SmsService smsService;
 
+
+    // =========================================================
+    // CANDIDATE REGISTRATION
+    // =========================================================
+
     @Override
     public String register(UserRegistrationDto dto) {
 
         log.info("Registering user: {}", dto.getEmail());
 
         if (candidateRepository.existsByEmail(dto.getEmail())) {
-            throw new EmailAlreadyExistsException("Email already exists.");
+            throw new EmailAlreadyExistsException(
+                    "Email already exists."
+            );
         }
 
         if (candidateRepository.existsByPhoneNumber(dto.getPhoneNumber())) {
-            throw new UserAlreadyExistsException("Phone number already exists.");
+            throw new UserAlreadyExistsException(
+                    "Phone number already exists."
+            );
         }
 
-        // Generate both OTPs before saving the candidate.
+        // Generate OTPs
         String emailOtp = generateOtp();
         String mobileOtp = generateOtp();
 
@@ -69,39 +76,76 @@ public class AuthServiceImpl implements AuthService {
                 .username(dto.getUsername())
                 .email(dto.getEmail())
                 .phoneNumber(dto.getPhoneNumber())
-                .password(passwordEncoder.encode(dto.getPassword()))
+                .password(
+                        passwordEncoder.encode(dto.getPassword())
+                )
+
+                // Enum → String
                 .appliedRole(dto.getAppliedRole())
                 .candidateType(dto.getCandidateType())
                 .role(Role.CANDIDATE)
+
                 .emailVerified(false)
                 .mobileVerified(false)
                 .enabled(false)
-                .emailOtpHash(passwordEncoder.encode(emailOtp))
-                .mobileOtpHash(passwordEncoder.encode(mobileOtp))
-                .otpExpiresAt(LocalDateTime.now().plusMinutes(10))
+
+                .emailOtpHash(
+                        passwordEncoder.encode(emailOtp)
+                )
+
+                .mobileOtpHash(
+                        passwordEncoder.encode(mobileOtp)
+                )
+
+                .otpExpiresAt(
+                        LocalDateTime.now().plusMinutes(10)
+                )
+
                 .build();
 
-        Candidate savedUser = candidateRepository.save(user);
+        Candidate savedUser =
+                candidateRepository.save(user);
 
-        emailService.sendOtp(savedUser.getEmail(), emailOtp);
+        // Send email OTP
+        emailService.sendOtp(
+                savedUser.getEmail(),
+                emailOtp
+        );
 
-        // Free development SMS service logs this OTP in the console.
-        smsService.sendOtp("+91" + savedUser.getPhoneNumber(), mobileOtp);
+        // Development SMS OTP
+        smsService.sendOtp(
+                "+91" + savedUser.getPhoneNumber(),
+                mobileOtp
+        );
 
-        log.info("Email and mobile OTP sent to candidate: {}", savedUser.getId());
+        log.info(
+                "Email and mobile OTP sent to candidate: {}",
+                savedUser.getId()
+        );
 
-        return "OTP sent to email and mobile number. Verify both OTPs to complete registration.";
+        return "OTP sent to email and mobile number. "
+                + "Verify both OTPs to complete registration.";
     }
+
+
+    // =========================================================
+    // CANDIDATE LOGIN
+    // =========================================================
+
     @Override
     public LoginResponseDto login(LoginRequestDto dto) {
 
-        Candidate user = candidateRepository.findByEmail(dto.getEmail())
-                .orElseThrow(() ->
-                        new BadCredentialsException("Invalid email or password."));
+        Candidate user =
+                candidateRepository.findByEmail(dto.getEmail())
+                        .orElseThrow(() ->
+                                new BadCredentialsException(
+                                        "Invalid email or password."
+                                )
+                        );
 
-        if (!user.isEnabled() ||
-                !user.isEmailVerified() ||
-                !user.isMobileVerified()) {
+        if (!user.isEnabled()
+                || !user.isEmailVerified()
+                || !user.isMobileVerified()) {
 
             throw new BadCredentialsException(
                     "Verify email and mobile OTP before logging in."
@@ -115,7 +159,8 @@ public class AuthServiceImpl implements AuthService {
                 )
         );
 
-        String token = jwtService.generateToken(user);
+        String token =
+                jwtService.generateToken(user);
 
         return LoginResponseDto.builder()
                 .accessToken(token)
@@ -128,39 +173,55 @@ public class AuthServiceImpl implements AuthService {
                 .build();
     }
 
-    @Override
-    public String verifyRegistrationOtp(VerifyOtpRequestDto request) {
 
-        Candidate user = candidateRepository.findByEmail(request.getEmail())
-                .orElseThrow(() ->
-                        new UsernameNotFoundException("Candidate not found."));
+    // =========================================================
+    // VERIFY REGISTRATION OTP
+    // =========================================================
+
+    @Override
+    public String verifyRegistrationOtp(
+            VerifyOtpRequestDto request) {
+
+        Candidate user =
+                candidateRepository.findByEmail(
+                        request.getEmail()
+                ).orElseThrow(() ->
+                        new UsernameNotFoundException(
+                                "Candidate not found."
+                        )
+                );
 
         if (user.isEnabled()) {
-            throw new BadCredentialsException("Candidate is already verified.");
+            throw new BadCredentialsException(
+                    "Candidate is already verified."
+            );
         }
 
-        if (user.getOtpExpiresAt() == null ||
-                user.getOtpExpiresAt().isBefore(LocalDateTime.now())) {
+        if (user.getOtpExpiresAt() == null
+                || user.getOtpExpiresAt()
+                .isBefore(LocalDateTime.now())) {
+
             throw new BadCredentialsException(
                     "OTP has expired. Please register again."
             );
         }
 
         boolean isEmailOtpValid =
-                user.getEmailOtpHash() != null &&
-                        passwordEncoder.matches(
-                                request.getEmailOtp(),
-                                user.getEmailOtpHash()
-                        );
+                user.getEmailOtpHash() != null
+                        && passwordEncoder.matches(
+                        request.getEmailOtp(),
+                        user.getEmailOtpHash()
+                );
 
         boolean isMobileOtpValid =
-                user.getMobileOtpHash() != null &&
-                        passwordEncoder.matches(
-                                request.getMobileOtp(),
-                                user.getMobileOtpHash()
-                        );
+                user.getMobileOtpHash() != null
+                        && passwordEncoder.matches(
+                        request.getMobileOtp(),
+                        user.getMobileOtpHash()
+                );
 
         if (!isEmailOtpValid || !isMobileOtpValid) {
+
             throw new BadCredentialsException(
                     "Invalid email OTP or mobile OTP."
             );
@@ -170,57 +231,98 @@ public class AuthServiceImpl implements AuthService {
         user.setMobileVerified(true);
         user.setEnabled(true);
 
-        // Prevent the OTP being reused.
+        // Prevent OTP reuse
         user.setEmailOtpHash(null);
         user.setMobileOtpHash(null);
         user.setOtpExpiresAt(null);
 
-        Candidate verifiedUser = candidateRepository.save(user);
+        Candidate verifiedUser =
+                candidateRepository.save(user);
 
-        // Create the blank profile only after successful verification.
-        candidateService.saveCandidateProfile(verifiedUser);
+        // Create blank profile
+        candidateService.saveCandidateProfile(
+                verifiedUser
+        );
 
-        log.info("Candidate OTP verified successfully: {}", verifiedUser.getId());
+        log.info(
+                "Candidate OTP verified successfully: {}",
+                verifiedUser.getId()
+        );
 
         return "Registration verified successfully. Please log in.";
     }
+
+
+    // =========================================================
+    // CURRENT USER
+    // =========================================================
 
     @Override
     public CurrentUserDto getCurrentUser() {
 
         Authentication authentication =
-                SecurityContextHolder.getContext().getAuthentication();
+                SecurityContextHolder
+                        .getContext()
+                        .getAuthentication();
 
-        if (authentication == null || !authentication.isAuthenticated()) {
-            throw new BadCredentialsException("User is not authenticated");
+        if (authentication == null
+                || !authentication.isAuthenticated()) {
+
+            throw new BadCredentialsException(
+                    "User is not authenticated"
+            );
         }
 
-        UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
+        UserPrincipal principal =
+                (UserPrincipal) authentication.getPrincipal();
 
         if (principal == null) {
-            throw new UsernameNotFoundException("User not found");
+            throw new UsernameNotFoundException(
+                    "User not found"
+            );
         }
 
         Long userId = principal.getUserId();
 
-        Candidate user = candidateRepository.findById(userId)
-                .orElseThrow(() ->
-                        new UsernameNotFoundException("User not found"));
+        Candidate user =
+                candidateRepository.findById(userId)
+                        .orElseThrow(() ->
+                                new UsernameNotFoundException(
+                                        "User not found"
+                                )
+                        );
 
         return CurrentUserDto.builder()
+                .userId(user.getId())
                 .username(user.getUsername())
                 .email(user.getEmail())
                 .role(user.getRole())
+                .candidateType(user.getCandidateType())
                 .build();
     }
 
+
+    // =========================================================
+    // HR LOGIN
+    // =========================================================
+
     @Override
-    public HrLoginResponseDto adminLogin(AdminLoginRequestDto request) {
-        Admin admin = adminRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new UsernameNotFoundException("Invalid credentials"));
+    public HrLoginResponseDto adminLogin(
+            AdminLoginRequestDto request) {
+
+        Admin admin =
+                adminRepository.findByEmail(
+                        request.getEmail()
+                ).orElseThrow(() ->
+                        new UsernameNotFoundException(
+                                "Invalid credentials"
+                        )
+                );
 
         if (admin.getRole() != Role.ADMIN) {
-            throw new BadCredentialsException("Access denied");
+            throw new BadCredentialsException(
+                    "Access denied"
+            );
         }
 
         authenticationManager.authenticate(
@@ -230,7 +332,8 @@ public class AuthServiceImpl implements AuthService {
                 )
         );
 
-        String token = jwtService.generateToken(admin);
+        String token =
+                jwtService.generateToken(admin);
 
         return HrLoginResponseDto.builder()
                 .accessToken(token)
@@ -239,19 +342,36 @@ public class AuthServiceImpl implements AuthService {
                 .role(admin.getRole())
                 .build();
     }
+
+
+    // =========================================================
+    // HR LOGOUT
+    // =========================================================
+
     @Override
     public void adminLogout(String token) {
 
         if (token == null || token.isBlank()) {
-            throw new IllegalArgumentException("Token is required.");
+
+            throw new IllegalArgumentException(
+                    "Token is required."
+            );
         }
 
         tokenBlacklist.blacklistToken(token);
 
         SecurityContextHolder.clearContext();
 
-        log.info("Admin logged out successfully.");
+        log.info(
+                "Admin logged out successfully."
+        );
     }
+
+
+    // =========================================================
+    // CANDIDATE LOGOUT
+    // =========================================================
+
     @Override
     public void logout(String token) {
 
@@ -259,11 +379,22 @@ public class AuthServiceImpl implements AuthService {
 
         SecurityContextHolder.clearContext();
 
-        log.info("User logged out successfully.");
+        log.info(
+                "User logged out successfully."
+        );
     }
+
+
+    // =========================================================
+    // GENERATE OTP
+    // =========================================================
 
     private String generateOtp() {
-        return String.format("%06d", new SecureRandom().nextInt(1_000_000));
-    }
 
+        return String.format(
+                "%06d",
+                new SecureRandom()
+                        .nextInt(1_000_000)
+        );
+    }
 }

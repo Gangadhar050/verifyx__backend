@@ -206,7 +206,7 @@ public List<CandidateSummaryDto> getAllCandidates() {
                 .email(dto.getEmail())
                 .phoneNumber(dto.getPhoneNumber())
                 .password(dto.getPassword())
-                .appliedRole(dto.getAppliedRole())
+                .appliedRole(dto.getAppliedRole())  
                 .candidateType(dto.getCandidateType())
                 .applicationStatus(ApplicationStatus.PENDING_VERIFICATION)
                 .build();

@@ -487,27 +487,27 @@ public class CandidateDocumentServiceImpl implements CandidateDocumentService {
                     CandidateDashboardDto.builder()
 
                             .candidateId(candidate.getId())
-
-                            .candidateName(candidate.getUsername())
-
-                            .email(candidate.getEmail())
-
-                            .phoneNumber(candidate.getPhoneNumber())
-
-                            .appliedRole(candidate.getAppliedRole())
-
-                            .candidateType(candidate.getCandidateType())
-
-                            .totalDocuments(documents.size())
-
-                            .verifiedDocuments(verified)
-
-                            .pendingDocuments(pending)
-
-                            .rejectedDocuments(rejected)
-
-                            .build()
-            );
+	
+	                            .candidateName(candidate.getUsername())
+	
+	                            .email(candidate.getEmail())
+	
+	                            .phoneNumber(candidate.getPhoneNumber())
+	
+	                            .appliedRole(candidate.getAppliedRole())
+	
+	                            .candidateType(candidate.getCandidateType())
+	
+	                            .totalDocuments(documents.size())
+	
+	                            .verifiedDocuments(verified)
+	
+	                            .pendingDocuments(pending)
+	
+	                            .rejectedDocuments(rejected)
+	
+	                            .build()
+	            );
         }
 
         return dashboard;
