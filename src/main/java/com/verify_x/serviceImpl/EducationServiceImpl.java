@@ -4,11 +4,7 @@ import com.verify_x.dto.EducationRequest;
 import com.verify_x.dto.EducationResponse;
 import com.verify_x.entity.Candidate;
 import com.verify_x.entity.Education;
-import com.verify_x.enums.BacklogStatus;
-import com.verify_x.enums.BoardType;
 import com.verify_x.enums.EducationDocumentType;
-import com.verify_x.enums.ModeOfStudy;
-import com.verify_x.enums.StreamType;
 import com.verify_x.enums.TechnicalSkill;
 import com.verify_x.exception.BadRequestException;
 import com.verify_x.exception.ResourceNotFoundException;
@@ -35,11 +31,13 @@ import software.amazon.awssdk.services.textract.model.Block;
 import software.amazon.awssdk.services.textract.model.BlockType;
 import software.amazon.awssdk.services.textract.model.DetectDocumentTextRequest;
 import software.amazon.awssdk.services.textract.model.DetectDocumentTextResponse;
+import software.amazon.awssdk.services.textract.model.Document;
 
 import java.io.IOException;
-import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
@@ -62,211 +60,93 @@ public class EducationServiceImpl implements EducationService {
     private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of(
             "application/pdf",
             "image/jpeg",
-            "image/png",
-            "image/jpg"
+            "image/jpg",
+            "image/png"
     );
 
     // ============================================================
-    // LOGGED-IN CANDIDATE
+    // GET LOGGED-IN CANDIDATE
     // ============================================================
 
     private Candidate getLoggedInCandidate() {
 
         Authentication authentication =
-                SecurityContextHolder
-                        .getContext()
-                        .getAuthentication();
+                SecurityContextHolder.getContext().getAuthentication();
 
-        if (authentication == null ||
-                authentication.getPrincipal() == null) {
-
-            throw new RuntimeException(
-                    "User is not authenticated."
-            );
+        if (authentication == null || authentication.getPrincipal() == null) {
+            throw new RuntimeException("User is not authenticated.");
         }
 
-        if (!(authentication.getPrincipal()
-                instanceof UserPrincipal)) {
-
-            throw new RuntimeException(
-                    "Invalid authenticated user."
-            );
+        if (!(authentication.getPrincipal() instanceof UserPrincipal)) {
+            throw new RuntimeException("Invalid authenticated user.");
         }
 
-        UserPrincipal principal =
-                (UserPrincipal) authentication.getPrincipal();
+        UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
 
         return candidateRepository
                 .findById(principal.getUserId())
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Candidate not found."
-                        )
-                );
+                .orElseThrow(() -> new ResourceNotFoundException("Candidate not found."));
     }
 
     // ============================================================
-    // MAP ENTITY -> RESPONSE
+    // ENTITY -> RESPONSE
     // ============================================================
 
-    private EducationResponse mapToResponse(
-            Education education) {
+    private EducationResponse mapToResponse(Education education) {
+
+        Candidate candidate = education.getCandidate();
+
+        List<TechnicalSkill> technicalSkills =
+                candidate != null ? candidate.getTechnicalSkills() : null;
 
         return EducationResponse.builder()
 
                 .id(education.getId())
 
                 // 10TH
-                .tenthSchoolName(
-                        education.getTenthSchoolName()
-                )
-
-                .tenthBoard(
-                        education.getTenthBoard()
-                )
-
-                .tenthSchoolLocation(
-                        education.getTenthSchoolLocation()
-                )
-
-                .tenthRollNumber(
-                        education.getTenthRollNumber()
-                )
-
-                .tenthPassingYear(
-                        education.getTenthPassingYear()
-                )
-
-                .tenthPercentage(
-                        education.getTenthPercentage()
-                )
-
-                .tenthMarksCardName(
-                        education.getTenthMarksCardName()
-                )
+                .tenthSchoolName(education.getTenthSchoolName())
+                .tenthBoard(education.getTenthBoard())
+                .tenthSchoolLocation(education.getTenthSchoolLocation())
+                .tenthRollNumber(education.getTenthRollNumber())
+                .tenthPassingYear(education.getTenthPassingYear())
+                .tenthPercentage(education.getTenthPercentage())
+                .tenthMarksCardName(education.getTenthMarksCardName())
 
                 // 12TH
-                .twelfthInstitutionName(
-                        education.getTwelfthInstitutionName()
-                )
-
-                .twelfthBoardUniversity(
-                        education.getTwelfthBoardUniversity()
-                )
-
-                .twelfthStream(
-                        education.getTwelfthStream()
-                )
-
-                .twelfthRegistrationNumber(
-                        education.getTwelfthRegistrationNumber()
-                )
-
-                .twelfthPassingYear(
-                        education.getTwelfthPassingYear()
-                )
-
-                .twelfthPercentage(
-                        education.getTwelfthPercentage()
-                )
-
-                .twelfthMarksCardName(
-                        education.getTwelfthMarksCardName()
-                )
+                .twelfthInstitutionName(education.getTwelfthInstitutionName())
+                .twelfthLocation(education.getTwelfthLocation())
+                .twelfthBoardUniversity(education.getTwelfthBoardUniversity())
+                .twelfthRegistrationNumber(education.getTwelfthRegistrationNumber())
+                .twelfthPassingYear(education.getTwelfthPassingYear())
+                .twelfthPercentage(education.getTwelfthPercentage())
+                .twelfthMarksCardName(education.getTwelfthMarksCardName())
 
                 // DEGREE
-                .degreeName(
-                        education.getDegreeName()
-                )
-
-                .specialization(
-                        education.getSpecialization()
-                )
-
-                .collegeName(
-                        education.getCollegeName()
-                )
-
-                .universityName(
-                        education.getUniversityName()
-                )
-
-                .usnNumber(
-                        education.getUsnNumber()
-                )
-
-                .degreeStartYear(
-                        education.getDegreeStartYear()
-                )
-
-                .degreeEndYear(
-                        education.getDegreeEndYear()
-                )
-
-                .degreePercentage(
-                        education.getDegreePercentage()
-                )
-
-                .backlogStatus(
-                        education.getBacklogStatus()
-                )
-
-                .degreeCertificateName(
-                        education.getDegreeCertificateName()
-                )
+                .degreeName(education.getDegreeName())
+                .specialization(education.getSpecialization())
+                .collegeName(education.getCollegeName())
+                .universityName(education.getUniversityName())
+                .degreeLocation(education.getDegreeLocation())
+                .usnNumber(education.getUsnNumber())
+                .degreeStartYear(education.getDegreeStartYear())
+                .degreeEndYear(education.getDegreeEndYear())
+                .degreePercentage(education.getDegreePercentage())
+                .degreeCertificateName(education.getDegreeCertificateName())
 
                 // MASTER'S
-                .mastersDegree(
-                        education.getMastersDegree()
-                )
+                .mastersDegree(education.getMastersDegree())
+                .mastersSpecialization(education.getMastersSpecialization())
+                .mastersCollege(education.getMastersCollege())
+                .mastersUniversity(education.getMastersUniversity())
+                .mastersLocation(education.getMastersLocation())
+                .mastersRegistrationNumber(education.getMastersRegistrationNumber())
+                .mastersStartYear(education.getMastersStartYear())
+                .mastersEndYear(education.getMastersEndYear())
+                .mastersPercentage(education.getMastersPercentage())
+                .mastersDegreeCertificateName(education.getMastersDegreeCertificateName())
 
-                .mastersSpecialization(
-                        education.getMastersSpecialization()
-                )
-
-                .mastersCollege(
-                        education.getMastersCollege()
-                )
-
-                .mastersUniversity(
-                        education.getMastersUniversity()
-                )
-
-                .mastersRegistrationNumber(
-                        education.getMastersRegistrationNumber()
-                )
-
-                .modeOfStudy(
-                        education.getModeOfStudy()
-                )
-
-                .mastersStartYear(
-                        education.getMastersStartYear()
-                )
-
-                .mastersEndYear(
-                        education.getMastersEndYear()
-                )
-
-                .mastersPercentage(
-                        education.getMastersPercentage()
-                )
-
-                .mastersMarksCardName(
-                        education.getMastersMarksCardName()
-                )
-
-                .mastersDegreeCertificateName(
-                        education.getMastersDegreeCertificateName()
-                )
-
-                // TECHNICAL SKILLS
-                .technicalSkills(
-                        education.getCandidate() != null
-                                ? education.getCandidate()
-                                .getTechnicalSkills()
-                                : null
-                )
+                // TECHNICAL SKILLS - DO NOT REMOVE
+                .technicalSkills(technicalSkills)
 
                 .build();
     }
@@ -282,23 +162,14 @@ public class EducationServiceImpl implements EducationService {
         }
 
         if (file.getSize() > MAX_FILE_SIZE) {
-
-            throw new BadRequestException(
-                    "Maximum allowed file size is 5 MB."
-            );
+            throw new BadRequestException("Maximum allowed file size is 5 MB.");
         }
 
-        String contentType =
-                file.getContentType();
+        String contentType = file.getContentType();
 
         if (contentType == null ||
-                !ALLOWED_CONTENT_TYPES.contains(
-                        contentType.toLowerCase(Locale.ROOT)
-                )) {
-
-            throw new BadRequestException(
-                    "Only PDF, JPG, JPEG and PNG files are allowed."
-            );
+                !ALLOWED_CONTENT_TYPES.contains(contentType.toLowerCase(Locale.ROOT))) {
+            throw new BadRequestException("Only PDF, JPG, JPEG and PNG files are allowed.");
         }
     }
 
@@ -310,8 +181,7 @@ public class EducationServiceImpl implements EducationService {
             MultipartFile file,
             Consumer<byte[]> dataSetter,
             Consumer<String> fileNameSetter,
-            Consumer<String> contentTypeSetter)
-            throws IOException {
+            Consumer<String> contentTypeSetter) throws IOException {
 
         if (file == null || file.isEmpty()) {
             return;
@@ -320,141 +190,82 @@ public class EducationServiceImpl implements EducationService {
         validateFile(file);
 
         dataSetter.accept(file.getBytes());
-
-        fileNameSetter.accept(
-                file.getOriginalFilename()
-        );
-
-        contentTypeSetter.accept(
-                file.getContentType()
-        );
+        fileNameSetter.accept(file.getOriginalFilename());
+        contentTypeSetter.accept(file.getContentType());
     }
 
     // ============================================================
-    // SET IF NOT NULL
+    // AWS TEXTRACT OCR
     // ============================================================
 
-    private <T> void setIfNotNull(
-            T value,
-            Consumer<T> setter) {
-
-        if (value != null) {
-            setter.accept(value);
-        }
-    }
-
-    // ============================================================
-    // OCR TEXT EXTRACTION
-    // ============================================================
-
-    private String extractTextFromFile(
-            MultipartFile file) {
+    private String extractTextFromFile(MultipartFile file) {
 
         if (file == null || file.isEmpty()) {
-
-            throw new BadRequestException(
-                    "Education document is required."
-            );
+            throw new BadRequestException("Education document is required.");
         }
 
         try {
 
             validateFile(file);
 
-            byte[] fileBytes =
-                    file.getBytes();
+            byte[] fileBytes = file.getBytes();
 
             DetectDocumentTextRequest request =
                     DetectDocumentTextRequest.builder()
-
                             .document(
-                                    software.amazon.awssdk
-                                            .services
-                                            .textract
-                                            .model
-                                            .Document
-                                            .builder()
-                                            .bytes(
-                                                    SdkBytes.fromByteArray(
-                                                            fileBytes
-                                                    )
-                                            )
+                                    Document.builder()
+                                            .bytes(SdkBytes.fromByteArray(fileBytes))
                                             .build()
                             )
-
                             .build();
 
             DetectDocumentTextResponse response =
-                    textractClient.detectDocumentText(
-                            request
-                    );
+                    textractClient.detectDocumentText(request);
 
-            StringBuilder text =
-                    new StringBuilder();
+            StringBuilder text = new StringBuilder();
 
             for (Block block : response.blocks()) {
 
-                if (block.blockType() ==
-                        BlockType.LINE) {
+                if (block.blockType() == BlockType.LINE) {
 
-                    if (block.text() != null &&
-                            !block.text().isBlank()) {
-
-                        text.append(block.text())
-                                .append("\n");
+                    if (block.text() != null && !block.text().isBlank()) {
+                        text.append(block.text()).append("\n");
                     }
                 }
             }
 
-            String result =
-                    text.toString().trim();
+            String result = text.toString().trim();
+
+            log.info("========== TEXTRACT OCR TEXT ({}) ==========",
+                    file.getOriginalFilename());
+            log.info("\n{}", result);
+            log.info("=============================================");
 
             if (result.isBlank()) {
-
                 throw new BadRequestException(
                         "No text could be extracted from the education document."
                 );
             }
 
-            log.info(
-                    "OCR completed successfully for file: {}",
-                    file.getOriginalFilename()
-            );
-
             return result;
 
         } catch (BadRequestException ex) {
-
             throw ex;
 
         } catch (IOException ex) {
-
-            log.error(
-                    "Unable to read education document.",
-                    ex
-            );
-
-            throw new RuntimeException(
-                    "Unable to read education document.",
-                    ex
-            );
+            log.error("Unable to read education document.", ex);
+            throw new RuntimeException("Unable to read education document.", ex);
 
         } catch (Exception ex) {
-
-            log.error(
-                    "AWS Textract failed.",
-                    ex
-            );
-
+            log.error("AWS Textract failed.", ex);
             throw new RuntimeException(
-                    "Unable to extract text from education document.",
-                    ex
+                    "Unable to extract text from education document.", ex
             );
         }
     }
 
     // ============================================================
-    // NORMALIZE TEXT
+    // OCR TEXT NORMALIZATION
     // ============================================================
 
     private String normalizeText(String text) {
@@ -465,65 +276,123 @@ public class EducationServiceImpl implements EducationService {
 
         return text
                 .replace("\r", "\n")
-                .replaceAll("[ \\t]+", " ")
+                .replace('\u0000', ' ')
+                .replaceAll("[\\t ]+", " ")
+                .replaceAll(" *\n *", "\n")
                 .replaceAll("\n{2,}", "\n")
                 .trim();
     }
 
-    // ============================================================
-    // FIND VALUE AFTER LABEL
-    // ============================================================
+    private String cleanExtractedValue(String value) {
 
-    private String findValue(
-            String text,
-            String... labels) {
-
-        if (text == null || text.isBlank()) {
+        if (value == null) {
             return null;
         }
 
-        String[] lines =
-                text.split("\\n");
+        String cleaned = value
+                .replaceAll("[|]+", " ")
+                .replaceAll("\\s{2,}", " ")
+                .replaceAll("^[\\s:;=\\-]+", "")
+                .replaceAll("[\\s:;=\\-]+$", "")
+                .trim();
 
-        for (String originalLine : lines) {
+        if (cleaned.isBlank() || cleaned.equalsIgnoreCase("string")) {
+            return null;
+        }
 
-            String line =
-                    originalLine.trim();
+        return cleaned;
+    }
+
+    // ============================================================
+    // KEY-VALUE BASED OCR EXTRACTION
+    // ============================================================
+    //
+    // Printed forms are "Label : Value" pairs, often two pairs per
+    // line, columns separated by a wide gap. Parse the whole document
+    // into a Map<String,String> once, then every field is a direct,
+    // safe lookup against that map instead of brittle line-by-line regex.
+
+    private Map<String, String> extractKeyValuePairs(String text) {
+
+        Map<String, String> map = new LinkedHashMap<>();
+
+        if (text == null || text.isBlank()) {
+            return map;
+        }
+
+        String[] lines = text.split("\\n");
+
+        for (String line : lines) {
 
             if (line.isBlank()) {
                 continue;
             }
 
-            String lower =
-                    line.toLowerCase(Locale.ROOT);
+            String[] segments = line.split("\\s{2,}");
 
-            for (String label : labels) {
+            for (int i = 0; i < segments.length; i++) {
 
-                String lowerLabel =
-                        label.toLowerCase(Locale.ROOT);
+                String seg = segments[i].trim();
 
-                int index =
-                        lower.indexOf(lowerLabel);
-
-                if (index < 0) {
+                if (seg.isEmpty()) {
                     continue;
                 }
 
-                String value =
-                        line.substring(
-                                index + label.length()
-                        )
-                        .replaceFirst(
-                                "^[\\s:=-]+",
-                                ""
-                        )
-                        .trim();
+                int colonIdx = seg.indexOf(':');
 
-                if (!value.isBlank()) {
+                if (colonIdx <= 0) {
+                    continue;
+                }
 
-                    return cleanExtractedValue(
-                            value
-                    );
+                if (colonIdx < seg.length() - 1) {
+
+                    // "Label: Value" both in the same segment
+                    String label = normalizeLabel(seg.substring(0, colonIdx));
+                    String value = cleanExtractedValue(seg.substring(colonIdx + 1));
+
+                    if (!label.isEmpty() && value != null) {
+                        map.putIfAbsent(label, value);
+                    }
+
+                } else {
+
+                    // "Label:" alone; value is the next segment on this line
+                    String label = normalizeLabel(seg.substring(0, colonIdx));
+
+                    if (!label.isEmpty() && i + 1 < segments.length) {
+
+                        String value = cleanExtractedValue(segments[i + 1]);
+
+                        if (value != null) {
+                            map.putIfAbsent(label, value);
+                        }
+                    }
+                }
+            }
+        }
+
+        return map;
+    }
+
+    // Strips non-English glyphs/punctuation noise from a label
+    private String normalizeLabel(String label) {
+
+        if (label == null) {
+            return "";
+        }
+
+        return label.replaceAll("[^a-zA-Z. ]", " ")
+                .replaceAll("\\s+", " ")
+                .trim()
+                .toLowerCase(Locale.ROOT);
+    }
+
+    private String getValue(Map<String, String> map, String... keyFragments) {
+
+        for (String fragment : keyFragments) {
+            for (Map.Entry<String, String> entry : map.entrySet()) {
+                if (entry.getKey().contains(fragment)) {
+                    return entry.getValue();
                 }
             }
         }
@@ -531,1000 +400,835 @@ public class EducationServiceImpl implements EducationService {
         return null;
     }
 
-    // ============================================================
-    // FIND REGEX VALUE
-    // ============================================================
+    // ------------------------------------------------------------
+    // REGISTER / ROLL NUMBER FALLBACKS
+    // ------------------------------------------------------------
 
-    private String findByPattern(
-            String text,
-            String regex) {
+    // Karnataka-style register number ("20" + 2-digit year + 5-9 digits)
+    private String extractRegisterNumberByShape(String text) {
 
-        if (text == null ||
-                text.isBlank()) {
-
-            return null;
-        }
-
-        Pattern pattern =
-                Pattern.compile(
-                        regex,
-                        Pattern.CASE_INSENSITIVE
-                );
-
-        Matcher matcher =
-                pattern.matcher(text);
+        Matcher matcher = Pattern.compile("\\b(20\\d{2}\\d{5,9})\\b").matcher(text);
 
         if (matcher.find()) {
-
-            return cleanExtractedValue(
-                    matcher.group(1)
-            );
+            return matcher.group(1);
         }
 
         return null;
     }
 
-    // ============================================================
-    // CLEAN OCR VALUE
-    // ============================================================
+    // DigiLocker-style "Reg. No. 20190318683" (no colon)
+    private String extractRegNoNoColon(String text) {
 
-    private String cleanExtractedValue(
-            String value) {
-
-        if (value == null) {
-            return null;
-        }
-
-        return value
-                .replaceAll("[|]+", " ")
-                .replaceAll("\\s{2,}", " ")
-                .trim();
-    }
-
-    // ============================================================
-    // EXTRACT YEAR
-    // ============================================================
-
-    private Integer extractYear(
-            String text,
-            String... labels) {
-
-        String value =
-                findValue(
-                        text,
-                        labels
-                );
-
-        if (value == null) {
-            return null;
-        }
-
-        Matcher matcher =
-                Pattern.compile(
-                        "\\b(19|20)\\d{2}\\b"
-                )
-                .matcher(value);
+        Matcher matcher = Pattern.compile(
+                "(?i)\\bReg\\.?\\s*No\\.?\\s*[:\\-]?\\s*(\\d{6,15})\\b"
+        ).matcher(text);
 
         if (matcher.find()) {
-
-            return Integer.valueOf(
-                    matcher.group()
-            );
+            return matcher.group(1);
         }
 
         return null;
     }
 
-    // ============================================================
-    // EXTRACT NUMBER
-    // ============================================================
+    // CBSE-style "Roll No 6603384" (no colon)
+    private String extractRollNoNoColon(String text) {
 
-    private String extractNumber(
-            String text,
-            String... labels) {
+        Matcher matcher = Pattern.compile(
+                "(?i)\\bRoll\\s*No\\.?\\s*[:\\-]?\\s*(\\d{5,12})\\b"
+        ).matcher(text);
 
-        String value =
-                findValue(
-                        text,
-                        labels
-                );
+        if (matcher.find()) {
+            return matcher.group(1);
+        }
+
+        return null;
+    }
+
+    // DigiLocker-style "School Code/Name GA0206 - S.V.S. ENGLISH MEDIUM HIGH SCHOOL"
+    private String[] extractSchoolCodeName(String text) {
+
+        Matcher matcher = Pattern.compile(
+                "(?i)School\\s*Code\\s*/\\s*Name\\s*[:\\-]?\\s*([A-Z0-9]{3,10})\\s*[-\u2013]\\s*(.+)"
+        ).matcher(text);
+
+        if (matcher.find()) {
+
+            String rawName = matcher.group(2);
+
+            rawName = rawName.split(
+                    "(?i)\\s*(Date of Birth|Father'?s Name|Mother'?s Name|Gender|" +
+                            "Register No|Reg\\.?\\s*No|Roll No|Candidate'?s Name)",
+                    2
+            )[0];
+
+            String name = cleanExtractedValue(rawName);
+
+            return new String[] { matcher.group(1).trim(), name };
+        }
+
+        return null;
+    }
+
+    // CBSE-style "School (Code) _KENDRIYA VIDYALAYA BERHAMPUR GANJAM OD (08314)"
+    private String extractSchoolCodeLabelFormat(String text) {
+
+        Matcher matcher = Pattern.compile(
+                "(?i)School\\s*\\(Code\\)\\s*_?\\s*(.+?)\\s*\\(\\d+\\)"
+        ).matcher(text);
+
+        if (matcher.find()) {
+            return cleanExtractedValue(matcher.group(1));
+        }
+
+        return null;
+    }
+
+    // CBSE-style "SENIOR SCHOOL CERTIFICATE EXAMINATION 2016" (no label)
+    private Integer extractYearAfterExamination(String text) {
+
+        Matcher matcher = Pattern.compile("(?i)EXAMINATION\\s+(\\d{4})").matcher(text);
+
+        if (matcher.find()) {
+            return Integer.parseInt(matcher.group(1));
+        }
+
+        return null;
+    }
+
+    // ------------------------------------------------------------
+    // BOARD - fixed phrase detection
+    // ------------------------------------------------------------
+
+    private String extractBoard(String text) {
+
+        String lower = text.replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
+
+        if (lower.contains("karnataka school examination and assessment board")) {
+            return "Karnataka School Examination and Assessment Board";
+        }
+        if (lower.contains("karnataka secondary education examination board")) {
+            return "Karnataka Secondary Education Examination Board";
+        }
+        if (lower.contains("central board of secondary education")) {
+            return "Central Board of Secondary Education";
+        }
+        if (lower.contains("cbse")) {
+            return "CBSE";
+        }
+        if (lower.contains("indian certificate of secondary education")) {
+            return "Indian Certificate of Secondary Education";
+        }
+        if (lower.contains("icse")) {
+            return "ICSE";
+        }
+        if (lower.contains("department of pre-university education")) {
+            return "Department of Pre-University Education";
+        }
+        if (lower.contains("pre-university education")) {
+            return "Pre-University Education";
+        }
+
+        return null;
+    }
+
+    // ------------------------------------------------------------
+    // UNIVERSITY - known-name detection
+    // ------------------------------------------------------------
+
+    private String extractUniversityName(String text) {
+
+        String lower = text.toLowerCase(Locale.ROOT);
+
+        String[] known = {
+                "Visvesvaraya Technological University",
+                "Bangalore University",
+                "Bengaluru City University",
+                "University of Mysore",
+                "Mangalore University",
+                "Kuvempu University",
+                "Davangere University",
+                "Tumkur University",
+                "Gulbarga University",
+                "Anna University"
+        };
+
+        for (String u : known) {
+            if (lower.contains(u.toLowerCase(Locale.ROOT))) {
+                return u;
+            }
+        }
+
+        Matcher matcher = Pattern.compile(
+                "([A-Za-z][A-Za-z .,&'-]{3,120}\\bUniversity\\b)",
+                Pattern.CASE_INSENSITIVE
+        ).matcher(text);
+
+        if (matcher.find()) {
+            return cleanExtractedValue(matcher.group(1));
+        }
+
+        return null;
+    }
+
+    // ------------------------------------------------------------
+    // DEGREE / MASTER'S NAME - known-phrase detection
+    // ------------------------------------------------------------
+
+    private String extractDegreeName(String text) {
+
+        String flat = text.replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
+
+        String[][] degrees = {
+                {"master of technology", "Master of Technology"},
+                {"master of engineering", "Master of Engineering"},
+                {"master of science", "Master of Science"},
+                {"master of commerce", "Master of Commerce"},
+                {"master of arts", "Master of Arts"},
+                {"master of business administration", "Master of Business Administration"},
+                {"master of computer applications", "Master of Computer Applications"},
+                {"bachelor of engineering", "Bachelor of Engineering"},
+                {"bachelor of technology", "Bachelor of Technology"},
+                {"bachelor of science", "Bachelor of Science"},
+                {"bachelor of commerce", "Bachelor of Commerce"},
+                {"bachelor of arts", "Bachelor of Arts"},
+                {"bachelor of computer applications", "Bachelor of Computer Applications"},
+                {"bachelor of business administration", "Bachelor of Business Administration"}
+        };
+
+        for (String[] degree : degrees) {
+            if (flat.contains(degree[0])) {
+                return degree[1];
+            }
+        }
+
+        // Fuzzy fallback for stylized/cursive fonts (common on convocation certs)
+        if (flat.contains("aster") && flat.contains("echnology")) return "Master of Technology";
+        if (flat.contains("achelor") && flat.contains("ngineering")) return "Bachelor of Engineering";
+        if (flat.contains("aster") && flat.contains("cience")) return "Master of Science";
+        if (flat.contains("achelor") && flat.contains("echnology")) return "Bachelor of Technology";
+
+        return null;
+    }
+
+    // ------------------------------------------------------------
+    // PERCENTAGE - printed directly, e.g. "(91.04%)"
+    // ------------------------------------------------------------
+
+    private Double extractPercentageInParens(String text) {
+
+        Matcher matcher = Pattern.compile(
+                "\\(\\s*(\\d{1,3}(?:\\.\\d+)?)\\s*%\\s*\\)"
+        ).matcher(text);
+
+        if (matcher.find()) {
+            Double value = parseDouble(matcher.group(1));
+            if (value != null && value >= 0 && value <= 100) {
+                return roundTwoDecimals(value);
+            }
+        }
+
+        return null;
+    }
+
+    // ------------------------------------------------------------
+    // PERCENTAGE - computed from a "TOTAL MARKS" row
+    //
+    // NOTE: grade-based sheets (subject grades like A1/A2/C1 instead
+    // of numeric totals) legitimately have no percentage; returns
+    // null in that case, which is correct.
+    // ------------------------------------------------------------
+
+    private Double computePercentageFromTotalsRow(String text) {
+
+        String[] lines = text.split("\\n");
+
+        for (int i = 0; i < lines.length; i++) {
+
+            String lineLower = lines[i].toLowerCase(Locale.ROOT);
+
+            if (!lineLower.contains("total marks") && !lineLower.contains("total")) {
+                continue;
+            }
+
+            StringBuilder window = new StringBuilder(lines[i]);
+
+            for (int j = i + 1; j < lines.length && j <= i + 4; j++) {
+                window.append(" ").append(lines[j]);
+            }
+
+            Matcher matcher = Pattern.compile(
+                    "(\\d{2,4})\\D{1,15}(\\d{2,4})"
+            ).matcher(window.toString());
+
+            while (matcher.find()) {
+
+                Double first = parseDouble(matcher.group(1));
+                Double second = parseDouble(matcher.group(2));
+
+                if (first == null || second == null || first <= 0) {
+                    continue;
+                }
+
+                double max = Math.max(first, second);
+                double obtained = Math.min(first, second);
+
+                if (max < 100) {
+                    continue;
+                }
+
+                double pct = (obtained / max) * 100.0;
+
+                if (pct >= 20 && pct <= 100) {
+                    return roundTwoDecimals(pct);
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private double roundTwoDecimals(double value) {
+        return Math.round(value * 100.0) / 100.0;
+    }
+
+    // Grabs up to N lines following a label line, joined with ", "
+    private String extractBlockAfterLabel(String text, String label, int maxLines) {
+
+        String[] lines = text.split("\\n");
+
+        for (int i = 0; i < lines.length; i++) {
+
+            String line = lines[i].toLowerCase(Locale.ROOT);
+
+            if (line.contains(label)) {
+
+                StringBuilder sb = new StringBuilder();
+                int collected = 0;
+
+                for (int j = i + 1; j < lines.length && collected < maxLines; j++) {
+
+                    String next = cleanExtractedValue(lines[j]);
+
+                    if (next == null) {
+                        continue;
+                    }
+
+                    if (next.matches("(?i).*(school code|register|year|signature|chairperson).*")) {
+                        break;
+                    }
+
+                    if (sb.length() > 0) {
+                        sb.append(", ");
+                    }
+
+                    sb.append(next);
+                    collected++;
+                }
+
+                String result = sb.toString();
+                return result.isBlank() ? null : result;
+            }
+        }
+
+        return null;
+    }
+
+    // Removes a trailing "(Autonomous College)" style annotation
+    private String stripTrailingParenthetical(String value) {
 
         if (value == null) {
             return null;
         }
 
-        Matcher matcher =
-                Pattern.compile(
-                        "[A-Z0-9][A-Z0-9\\-/]{3,}"
-                )
-                .matcher(
-                        value.toUpperCase(Locale.ROOT)
-                );
+        String cleaned = value.replaceAll("\\(.*?\\)", "").trim();
+
+        return cleaned.isBlank() ? cleanExtractedValue(value) : cleanExtractedValue(cleaned);
+    }
+
+    // Pulls a clean alphanumeric ID out of a raw value (register no, USN, etc.)
+    private String extractCleanIdValue(String value) {
+
+        if (value == null) {
+            return null;
+        }
+
+        Matcher matcher = Pattern.compile("\\b[A-Za-z0-9]{4,20}\\b").matcher(value);
 
         if (matcher.find()) {
-
             return matcher.group().trim();
         }
 
-        return value;
+        return null;
     }
 
-    // ============================================================
-    // EXTRACT PERCENTAGE
-    // ============================================================
+    // Finds a plausible year (1950-2100) inside a string
+    private Integer extractYearFromValue(String value) {
 
-    private Double extractPercentage(
-            String text) {
-
-        String value =
-                findValue(
-                        text,
-                        "Percentage",
-                        "Percentage %",
-                        "Percentage of Marks",
-                        "Aggregate Percentage",
-                        "Overall Percentage"
-                );
-
-        if (value != null) {
-
-            Matcher matcher =
-                    Pattern.compile(
-                            "(\\d+(?:\\.\\d+)?)\\s*%"
-                    )
-                    .matcher(value);
-
-            if (matcher.find()) {
-
-                return Double.valueOf(
-                        matcher.group(1)
-                );
-            }
+        if (value == null) {
+            return null;
         }
 
-        Matcher globalMatcher =
-                Pattern.compile(
-                        "(?:percentage|aggregate|overall)"
-                                + "[^\\d]{0,20}"
-                                + "(\\d+(?:\\.\\d+)?)\\s*%",
-                        Pattern.CASE_INSENSITIVE
-                )
-                .matcher(text);
+        Matcher matcher = Pattern.compile("\\b(19\\d{2}|20\\d{2})\\b").matcher(value);
 
-        if (globalMatcher.find()) {
+        while (matcher.find()) {
 
-            return Double.valueOf(
-                    globalMatcher.group(1)
-            );
+            int year = Integer.parseInt(matcher.group(1));
+
+            if (year >= 1950 && year <= 2100) {
+                return year;
+            }
         }
 
         return null;
     }
 
-    // ============================================================
-    // PERCENTAGE FROM MARKS
-    // ============================================================
+    private Double parseDouble(String value) {
 
-    private Double extractPercentageFromMarks(
-            String text) {
+        try {
+            return Double.parseDouble(value.replace(",", "").trim());
+        } catch (Exception e) {
+            return null;
+        }
+    }
 
-        Double percentage =
-                extractPercentage(text);
+    // Sanity guard for tiny OCR-fragment "Subject" values
+    private String validateSpecialization(String value) {
 
-        if (percentage != null) {
-            return percentage;
+        if (value == null) {
+            return null;
         }
 
-        Matcher matcher =
-                Pattern.compile(
-                        "(\\d+(?:\\.\\d+)?)\\s*%"
-                )
-                .matcher(text);
+        String cleaned = cleanExtractedValue(value);
+
+        if (cleaned == null || cleaned.length() < 4) {
+            return null;
+        }
+
+        return cleaned;
+    }
+
+    // Raw-regex fallback for the "Subject" field
+    private String extractSubjectFallback(String text) {
+
+        Matcher matcher = Pattern.compile("(?i)subject\\s*[:\\-]?\\s*(.+)").matcher(text);
 
         if (matcher.find()) {
+            return matcher.group(1);
+        }
 
-            double value =
-                    Double.parseDouble(
-                            matcher.group(1)
-                    );
+        return null;
+    }
 
-            if (value >= 0 &&
-                    value <= 100) {
+    private String resolveSubject(Map<String, String> kv, String text) {
 
-                return value;
+        String subject = getValue(kv, "subject");
+
+        if (subject == null || validateSpecialization(subject) == null) {
+
+            String fallback = extractSubjectFallback(text);
+
+            if (fallback != null) {
+                subject = fallback;
             }
         }
 
-        return null;
+        return subject;
     }
 
     // ============================================================
-    // DETECT BOARD
+    // 10TH OCR
     // ============================================================
 
-    private BoardType detectBoard(
-            String text) {
+    private void extractTenthData(Education education, String rawText) {
 
-        String lower =
-                text.toLowerCase(Locale.ROOT);
-
-        if (lower.contains("central board") ||
-                lower.contains("cbse")) {
-
-            return BoardType.CBSE;
+        if (rawText == null || rawText.isBlank()) {
+            return;
         }
 
-        if (lower.contains("icse") ||
-                lower.contains(
-                        "council for the indian school"
-                )) {
+        String text = normalizeText(rawText);
+        Map<String, String> kv = extractKeyValuePairs(text);
 
-            return BoardType.ICSE;
+        log.info("TENTH KV MAP: {}", kv);
+
+        setIfNotNull(extractBoard(text), education::setTenthBoard);
+
+        String regNo = getValue(kv, "register no", "reg no", "registration no");
+        regNo = extractCleanIdValue(regNo);
+
+        if (regNo == null) {
+            regNo = extractRegNoNoColon(text);
+        }
+        if (regNo == null) {
+            regNo = extractRegisterNumberByShape(text);
         }
 
-        if (lower.contains(
-                "government of karnataka"
-        ) ||
-                lower.contains(
-                        "karnataka school examination"
-                ) ||
-                lower.contains(
-                        "karnataka secondary"
-                ) ||
-                lower.contains(
-                        "state board"
-                )) {
+        setIfNotNull(regNo, education::setTenthRollNumber);
 
-            return BoardType.STATE_BOARD;
+        String yearVal = getValue(kv, "year of result", "year");
+        Integer year = extractYearFromValue(yearVal);
+
+        if (year == null && regNo != null && regNo.matches("20\\d{7,10}")) {
+            year = Integer.parseInt(regNo.substring(0, 4));
         }
 
-        return BoardType.OTHER;
+        setIfNotNull(year, education::setTenthPassingYear);
+
+        Double percentage = extractPercentageInParens(text);
+        if (percentage == null) {
+            percentage = computePercentageFromTotalsRow(text);
+        }
+
+        setIfNotNull(percentage, education::setTenthPercentage);
+
+        String[] schoolCodeName = extractSchoolCodeName(text);
+
+        if (schoolCodeName != null) {
+
+            setIfNotNull(schoolCodeName[1], education::setTenthSchoolName);
+
+        } else {
+
+            String schoolBlock = extractBlockAfterLabel(text, "school name and address", 2);
+
+            if (schoolBlock != null) {
+
+                String[] parts = schoolBlock.split(",", 2);
+
+                setIfNotNull(cleanExtractedValue(parts[0]), education::setTenthSchoolName);
+
+                if (parts.length > 1) {
+                    setIfNotNull(cleanExtractedValue(parts[1]), education::setTenthSchoolLocation);
+                }
+            }
+        }
     }
 
     // ============================================================
-    // DETECT STREAM
+    // 12TH OCR
     // ============================================================
 
-    private StreamType detectStream(
-            String text) {
+    private void extractTwelfthData(Education education, String rawText) {
 
-        String lower =
-                text.toLowerCase(Locale.ROOT);
-
-        if (lower.contains("science")) {
-
-            return StreamType.SCIENCE;
+        if (rawText == null || rawText.isBlank()) {
+            return;
         }
 
-        if (lower.contains("commerce")) {
+        String text = normalizeText(rawText);
+        Map<String, String> kv = extractKeyValuePairs(text);
 
-            return StreamType.COMMERCE;
+        log.info("TWELFTH KV MAP: {}", kv);
+
+        setIfNotNull(extractBoard(text), education::setTwelfthBoardUniversity);
+
+        String regNo = getValue(kv, "register no", "reg no", "registration no", "regn no",
+                "roll no", "admit card id", "admit card no");
+        regNo = extractCleanIdValue(regNo);
+
+        if (regNo == null) {
+            regNo = extractRegNoNoColon(text);
+        }
+        if (regNo == null) {
+            regNo = extractRollNoNoColon(text);
+        }
+        if (regNo == null) {
+            regNo = extractRegisterNumberByShape(text);
         }
 
-        if (lower.contains("arts") ||
-                lower.contains("humanities")) {
+        setIfNotNull(regNo, education::setTwelfthRegistrationNumber);
 
-            return StreamType.ARTS;
+        String yearVal = getValue(kv, "year of result", "year", "year of passing", "exam year");
+        Integer year = extractYearFromValue(yearVal);
+
+        if (year == null) {
+            year = extractYearAfterExamination(text);
+        }
+        if (year == null && regNo != null && regNo.matches("20\\d{7,10}")) {
+            year = Integer.parseInt(regNo.substring(0, 4));
+        }
+        if (year == null) {
+            year = extractYearFromValue(text);
         }
 
-        if (lower.contains("diploma")) {
+        setIfNotNull(year, education::setTwelfthPassingYear);
 
-            return StreamType.DIPLOMA;
+        Double percentage = extractPercentageInParens(text);
+        if (percentage == null) {
+            percentage = computePercentageFromTotalsRow(text);
         }
 
-        if (lower.contains("vocational")) {
+        setIfNotNull(percentage, education::setTwelfthPercentage);
 
-            /*
-             * IMPORTANT:
-             * StreamType does not contain VOCATIONAL.
-             * Therefore use OTHER.
-             */
-            return StreamType.OTHER;
+        String collegeDetails = getValue(kv, "college details", "college", "school",
+                "institution", "name of institution", "name of the school");
+
+        if (collegeDetails == null) {
+            collegeDetails = extractSchoolCodeLabelFormat(text);
+        }
+        if (collegeDetails == null) {
+            collegeDetails = extractBlockAfterLabel(text, "college details", 1);
+        }
+        if (collegeDetails == null) {
+            collegeDetails = extractBlockAfterLabel(text, "school", 1);
+        }
+        if (collegeDetails == null) {
+            collegeDetails = extractBlockAfterLabel(text, "institution", 1);
         }
 
-        return null;
+        if (collegeDetails != null) {
+
+            String stripped = collegeDetails.replaceFirst("^[A-Z]{1,4}\\d{3,6},\\s*", "");
+
+            String[] parts = stripped.split(",", 2);
+
+            setIfNotNull(cleanExtractedValue(parts[0]), education::setTwelfthInstitutionName);
+
+            if (parts.length > 1) {
+                setIfNotNull(cleanExtractedValue(parts[1]), education::setTwelfthLocation);
+            }
+        }
     }
 
     // ============================================================
-    // DETECT MODE OF STUDY
+    // DEGREE OCR
     // ============================================================
 
-    private ModeOfStudy detectModeOfStudy(
-            String text) {
+    private void extractDegreeData(Education education, String rawText) {
 
-        String lower =
-                text.toLowerCase(Locale.ROOT);
-
-        if (lower.contains("full time") ||
-                lower.contains("full-time")) {
-
-            return ModeOfStudy.FULL_TIME;
+        if (rawText == null || rawText.isBlank()) {
+            return;
         }
 
-        if (lower.contains("part time") ||
-                lower.contains("part-time")) {
+        String text = normalizeText(rawText);
+        Map<String, String> kv = extractKeyValuePairs(text);
 
-            return ModeOfStudy.PART_TIME;
+        setIfNotNull(extractDegreeName(text), education::setDegreeName);
+
+        String college = getValue(kv, "name of the college", "college name");
+
+        if (college == null) {
+            college = extractBlockAfterLabel(text, "name of the college", 2);
         }
 
-        if (lower.contains("distance")) {
+        setIfNotNull(stripTrailingParenthetical(college), education::setCollegeName);
 
-            return ModeOfStudy.DISTANCE;
-        }
-
-        if (lower.contains("online")) {
-
-            return ModeOfStudy.ONLINE;
-        }
-
-        return null;
-    }
-
-    // ============================================================
-    // DETECT BACKLOG
-    // ============================================================
-
-    private BacklogStatus detectBacklog(
-            String text) {
-
-        String lower =
-                text.toLowerCase(Locale.ROOT);
-
-        if (lower.contains("no backlog") ||
-                lower.contains("backlog: no") ||
-                lower.contains("backlogs: no") ||
-                lower.contains("nil backlog")) {
-
-            return BacklogStatus.NO;
-        }
-
-        if (lower.contains("backlog: yes") ||
-                lower.contains("backlogs: yes")) {
-
-            return BacklogStatus.YES;
-        }
-
-        return null;
-    }
-
-    // ============================================================
-    // EXTRACT 10TH DATA
-    // ============================================================
-
-    private void extractTenthData(
-            Education education,
-            String rawText) {
-
-        String text =
-                normalizeText(rawText);
-
-        education.setTenthBoard(
-                detectBoard(text)
-        );
-
-        String rollNumber =
-                extractNumber(
-                        text,
-                        "Register No",
-                        "Register Number",
-                        "Roll No",
-                        "Roll Number",
-                        "Registration No",
-                        "Registration Number"
-                );
+        setIfNotNull(extractUniversityName(text), education::setUniversityName);
 
         setIfNotNull(
-                rollNumber,
-                education::setTenthRollNumber
-        );
-
-        Integer passingYear =
-                extractYear(
-                        text,
-                        "Passing Year",
-                        "Year of Passing",
-                        "Examination Year",
-                        "Year"
-                );
-
-        setIfNotNull(
-                passingYear,
-                education::setTenthPassingYear
-        );
-
-        Double percentage =
-                extractPercentageFromMarks(text);
-
-        setIfNotNull(
-                percentage,
-                education::setTenthPercentage
-        );
-
-        String schoolName =
-                findValue(
-                        text,
-                        "School Name",
-                        "School Name and Address",
-                        "Name of School",
-                        "Institution Name"
-                );
-
-        if (schoolName == null) {
-
-            schoolName =
-                    findByPattern(
-                            text,
-                            "(?:school\\s+name(?:\\s+and\\s+address)?)[\\s:=-]*([^\\n]+)"
-                    );
-        }
-
-        setIfNotNull(
-                schoolName,
-                education::setTenthSchoolName
-        );
-
-        String schoolLocation =
-                findValue(
-                        text,
-                        "School Location",
-                        "School Address",
-                        "Address",
-                        "Location"
-                );
-
-        setIfNotNull(
-                schoolLocation,
-                education::setTenthSchoolLocation
-        );
-    }
-
-    // ============================================================
-    // EXTRACT 12TH DATA
-    // ============================================================
-
-    private void extractTwelfthData(
-            Education education,
-            String rawText) {
-
-        String text =
-                normalizeText(rawText);
-
-        BoardType board =
-                detectBoard(text);
-
-        String boardName =
-                findValue(
-                        text,
-                        "Board",
-                        "Board Name",
-                        "Board of Education",
-                        "University"
-                );
-
-        if (boardName == null &&
-                board != null) {
-
-            boardName =
-                    board.name();
-        }
-
-        setIfNotNull(
-                boardName,
-                education::setTwelfthBoardUniversity
-        );
-
-        String institution =
-                findValue(
-                        text,
-                        "College Name",
-                        "Institution Name",
-                        "School Name",
-                        "Name of Institution",
-                        "Name of College"
-                );
-
-        setIfNotNull(
-                institution,
-                education::setTwelfthInstitutionName
-        );
-
-        String registrationNumber =
-                extractNumber(
-                        text,
-                        "Register No",
-                        "Register Number",
-                        "Registration No",
-                        "Registration Number",
-                        "Roll No",
-                        "Roll Number"
-                );
-
-        setIfNotNull(
-                registrationNumber,
-                education::setTwelfthRegistrationNumber
-        );
-
-        Integer passingYear =
-                extractYear(
-                        text,
-                        "Passing Year",
-                        "Year of Passing",
-                        "Examination Year",
-                        "Year"
-                );
-
-        setIfNotNull(
-                passingYear,
-                education::setTwelfthPassingYear
-        );
-
-        Double percentage =
-                extractPercentageFromMarks(text);
-
-        setIfNotNull(
-                percentage,
-                education::setTwelfthPercentage
-        );
-
-        StreamType stream =
-                detectStream(text);
-
-        setIfNotNull(
-                stream,
-                education::setTwelfthStream
-        );
-    }
-
-    // ============================================================
-    // EXTRACT DEGREE DATA
-    // ============================================================
-
-    private void extractDegreeData(
-            Education education,
-            String rawText) {
-
-        String text =
-                normalizeText(rawText);
-
-        String degreeName =
-                findValue(
-                        text,
-                        "Degree",
-                        "Degree Name",
-                        "Qualification",
-                        "Course",
-                        "Programme",
-                        "Program"
-                );
-
-        setIfNotNull(
-                degreeName,
-                education::setDegreeName
-        );
-
-        String specialization =
-                findValue(
-                        text,
-                        "Specialization",
-                        "Specialisation",
-                        "Branch",
-                        "Major",
-                        "Stream"
-                );
-
-        setIfNotNull(
-                specialization,
+                validateSpecialization(resolveSubject(kv, text)),
                 education::setSpecialization
         );
 
-        String college =
-                findValue(
-                        text,
-                        "College Name",
-                        "Name of College",
-                        "College",
-                        "Institution Name",
-                        "Institution"
-                );
+        String usn = getValue(kv, "university seat number", "seat number", "usn");
+        usn = extractCleanIdValue(usn);
 
-        setIfNotNull(
-                college,
-                education::setCollegeName
-        );
+        if (usn != null) {
+            education.setUsnNumber(usn.toUpperCase(Locale.ROOT));
+        }
 
-        String university =
-                findValue(
-                        text,
-                        "University Name",
-                        "Name of University",
-                        "University"
-                );
+        String dateVal = getValue(kv, "date");
+        Integer year = extractYearFromValue(dateVal);
 
-        setIfNotNull(
-                university,
-                education::setUniversityName
-        );
+        if (year == null) {
+            year = extractYearFromValue(text);
+        }
 
-        String usn =
-                extractNumber(
-                        text,
-                        "USN",
-                        "USN Number",
-                        "University Seat Number",
-                        "Register Number",
-                        "Registration Number"
-                );
+        setIfNotNull(year, education::setDegreeEndYear);
 
-        setIfNotNull(
-                usn,
-                education::setUsnNumber
-        );
+        Double percentage = extractPercentageInParens(text);
+        if (percentage == null) {
+            percentage = computePercentageFromTotalsRow(text);
+        }
 
-        Integer startYear =
-                extractYear(
-                        text,
-                        "Start Year",
-                        "Starting Year",
-                        "Admission Year",
-                        "From"
-                );
-
-        setIfNotNull(
-                startYear,
-                education::setDegreeStartYear
-        );
-
-        Integer endYear =
-                extractYear(
-                        text,
-                        "End Year",
-                        "Completion Year",
-                        "Graduation Year",
-                        "Passing Year",
-                        "Year of Passing"
-                );
-
-        setIfNotNull(
-                endYear,
-                education::setDegreeEndYear
-        );
-
-        Double percentage =
-                extractPercentageFromMarks(text);
-
-        setIfNotNull(
-                percentage,
-                education::setDegreePercentage
-        );
-
-        BacklogStatus backlog =
-                detectBacklog(text);
-
-        setIfNotNull(
-                backlog,
-                education::setBacklogStatus
-        );
+        setIfNotNull(percentage, education::setDegreePercentage);
     }
 
     // ============================================================
-    // EXTRACT MASTER'S DATA
+    // MASTER'S OCR
     // ============================================================
 
-    private void extractMastersData(
-            Education education,
-            String rawText) {
+    private void extractMastersData(Education education, String rawText) {
 
-        String text =
-                normalizeText(rawText);
+        if (rawText == null || rawText.isBlank()) {
+            return;
+        }
 
-        String mastersDegree =
-                findValue(
-                        text,
-                        "Degree",
-                        "Degree Name",
-                        "Qualification",
-                        "Course",
-                        "Programme",
-                        "Program"
-                );
+        String text = normalizeText(rawText);
+        Map<String, String> kv = extractKeyValuePairs(text);
 
-        setIfNotNull(
-                mastersDegree,
-                education::setMastersDegree
-        );
+        setIfNotNull(extractDegreeName(text), education::setMastersDegree);
 
-        String specialization =
-                findValue(
-                        text,
-                        "Specialization",
-                        "Specialisation",
-                        "Branch",
-                        "Major"
-                );
+        String college = getValue(kv, "name of the college", "college name");
+
+        if (college == null) {
+            college = extractBlockAfterLabel(text, "name of the college", 2);
+        }
+
+        setIfNotNull(stripTrailingParenthetical(college), education::setMastersCollege);
+
+        setIfNotNull(extractUniversityName(text), education::setMastersUniversity);
 
         setIfNotNull(
-                specialization,
+                validateSpecialization(resolveSubject(kv, text)),
                 education::setMastersSpecialization
         );
 
-        String college =
-                findValue(
-                        text,
-                        "College Name",
-                        "Name of College",
-                        "College",
-                        "Institution Name",
-                        "Institution"
-                );
+        String regNo = getValue(kv, "university seat number", "seat number", "usn");
+        regNo = extractCleanIdValue(regNo);
 
-        setIfNotNull(
-                college,
-                education::setMastersCollege
-        );
+        if (regNo != null) {
+            education.setMastersRegistrationNumber(regNo.toUpperCase(Locale.ROOT));
+        }
 
-        String university =
-                findValue(
-                        text,
-                        "University Name",
-                        "Name of University",
-                        "University"
-                );
+        String dateVal = getValue(kv, "date");
+        Integer year = extractYearFromValue(dateVal);
 
-        setIfNotNull(
-                university,
-                education::setMastersUniversity
-        );
+        if (year == null) {
+            year = extractYearFromValue(text);
+        }
 
-        String registrationNumber =
-                extractNumber(
-                        text,
-                        "Registration No",
-                        "Registration Number",
-                        "Register No",
-                        "Register Number",
-                        "Roll No",
-                        "Roll Number"
-                );
+        setIfNotNull(year, education::setMastersEndYear);
 
-        setIfNotNull(
-                registrationNumber,
-                education::setMastersRegistrationNumber
-        );
+        Double percentage = extractPercentageInParens(text);
+        if (percentage == null) {
+            percentage = computePercentageFromTotalsRow(text);
+        }
 
-        Integer startYear =
-                extractYear(
-                        text,
-                        "Start Year",
-                        "Starting Year",
-                        "Admission Year",
-                        "From"
-                );
-
-        setIfNotNull(
-                startYear,
-                education::setMastersStartYear
-        );
-
-        Integer endYear =
-                extractYear(
-                        text,
-                        "End Year",
-                        "Completion Year",
-                        "Graduation Year",
-                        "Passing Year",
-                        "Year of Passing"
-                );
-
-        setIfNotNull(
-                endYear,
-                education::setMastersEndYear
-        );
-
-        Double percentage =
-                extractPercentageFromMarks(text);
-
-        setIfNotNull(
-                percentage,
-                education::setMastersPercentage
-        );
-
-        ModeOfStudy mode =
-                detectModeOfStudy(text);
-
-        setIfNotNull(
-                mode,
-                education::setModeOfStudy
-        );
+        setIfNotNull(percentage, education::setMastersPercentage);
     }
 
     // ============================================================
-    // MAP REQUEST -> ENTITY
+    // SET ONLY IF VALUE EXISTS
     // ============================================================
 
-    private void mapRequestToEntity(
-            Education education,
-            EducationRequest request)
-            throws IOException {
+    private <T> void setIfNotNull(T value, Consumer<T> setter) {
+
+        if (value != null && !value.toString().isBlank()) {
+            setter.accept(value);
+        }
+    }
+
+    // ============================================================
+    // MANUAL VALUES (override OCR)
+    // ============================================================
+
+    private void applyManualValues(Education education, EducationRequest request) {
 
         if (request == null) {
-
-            throw new BadRequestException(
-                    "Education request is required."
-            );
+            return;
         }
 
-        // ========================================================
         // 10TH
-        // ========================================================
+        setManualString(request.getTenthSchoolName(), education::setTenthSchoolName);
+        setManualString(request.getTenthBoard(), education::setTenthBoard);
+        setManualString(request.getTenthSchoolLocation(), education::setTenthSchoolLocation);
+        setManualString(request.getTenthRollNumber(), education::setTenthRollNumber);
+        setManualYear(request.getTenthPassingYear(), education::setTenthPassingYear);
+        setManualPercentage(request.getTenthPercentage(), education::setTenthPercentage);
 
-        setIfNotNull(
-                request.getTenthSchoolName(),
-                education::setTenthSchoolName
-        );
-
-        setIfNotNull(
-                request.getTenthBoard(),
-                education::setTenthBoard
-        );
-
-        setIfNotNull(
-                request.getTenthSchoolLocation(),
-                education::setTenthSchoolLocation
-        );
-
-        setIfNotNull(
-                request.getTenthRollNumber(),
-                education::setTenthRollNumber
-        );
-
-        setIfNotNull(
-                request.getTenthPassingYear(),
-                education::setTenthPassingYear
-        );
-
-        setIfNotNull(
-                request.getTenthPercentage(),
-                education::setTenthPercentage
-        );
-
-        // ========================================================
         // 12TH
-        // ========================================================
+        setManualString(request.getTwelfthInstitutionName(), education::setTwelfthInstitutionName);
+        setManualString(request.getTwelfthLocation(), education::setTwelfthLocation);
+        setManualString(request.getTwelfthBoardUniversity(), education::setTwelfthBoardUniversity);
+        setManualString(request.getTwelfthRegistrationNumber(), education::setTwelfthRegistrationNumber);
+        setManualYear(request.getTwelfthPassingYear(), education::setTwelfthPassingYear);
+        setManualPercentage(request.getTwelfthPercentage(), education::setTwelfthPercentage);
 
-        setIfNotNull(
-                request.getTwelfthInstitutionName(),
-                education::setTwelfthInstitutionName
-        );
-
-        setIfNotNull(
-                request.getTwelfthBoardUniversity(),
-                education::setTwelfthBoardUniversity
-        );
-
-        setIfNotNull(
-                request.getTwelfthStream(),
-                education::setTwelfthStream
-        );
-
-        setIfNotNull(
-                request.getTwelfthRegistrationNumber(),
-                education::setTwelfthRegistrationNumber
-        );
-
-        setIfNotNull(
-                request.getTwelfthPassingYear(),
-                education::setTwelfthPassingYear
-        );
-
-        setIfNotNull(
-                request.getTwelfthPercentage(),
-                education::setTwelfthPercentage
-        );
-
-        // ========================================================
         // DEGREE
-        // ========================================================
+        setManualString(request.getDegreeName(), education::setDegreeName);
+        setManualString(request.getSpecialization(), education::setSpecialization);
+        setManualString(request.getCollegeName(), education::setCollegeName);
+        setManualString(request.getUniversityName(), education::setUniversityName);
+        setManualString(request.getDegreeLocation(), education::setDegreeLocation);
+        setManualString(request.getUsnNumber(), education::setUsnNumber);
+        setManualYear(request.getDegreeStartYear(), education::setDegreeStartYear);
+        setManualYear(request.getDegreeEndYear(), education::setDegreeEndYear);
+        setManualPercentage(request.getDegreePercentage(), education::setDegreePercentage);
 
-        setIfNotNull(
-                request.getDegreeName(),
-                education::setDegreeName
-        );
-
-        setIfNotNull(
-                request.getSpecialization(),
-                education::setSpecialization
-        );
-
-        setIfNotNull(
-                request.getCollegeName(),
-                education::setCollegeName
-        );
-
-        setIfNotNull(
-                request.getUniversityName(),
-                education::setUniversityName
-        );
-
-        setIfNotNull(
-                request.getUsnNumber(),
-                education::setUsnNumber
-        );
-
-        setIfNotNull(
-                request.getDegreeStartYear(),
-                education::setDegreeStartYear
-        );
-
-        setIfNotNull(
-                request.getDegreeEndYear(),
-                education::setDegreeEndYear
-        );
-
-        setIfNotNull(
-                request.getDegreePercentage(),
-                education::setDegreePercentage
-        );
-
-        setIfNotNull(
-                request.getBacklogStatus(),
-                education::setBacklogStatus
-        );
-
-        // ========================================================
         // MASTER'S
-        // ========================================================
+        setManualString(request.getMastersDegree(), education::setMastersDegree);
+        setManualString(request.getMastersSpecialization(), education::setMastersSpecialization);
+        setManualString(request.getMastersCollege(), education::setMastersCollege);
+        setManualString(request.getMastersUniversity(), education::setMastersUniversity);
+        setManualString(request.getMastersLocation(), education::setMastersLocation);
+        setManualString(request.getMastersRegistrationNumber(), education::setMastersRegistrationNumber);
+        setManualYear(request.getMastersStartYear(), education::setMastersStartYear);
+        setManualYear(request.getMastersEndYear(), education::setMastersEndYear);
+        setManualPercentage(request.getMastersPercentage(), education::setMastersPercentage);
 
-        setIfNotNull(
-                request.getMastersDegree(),
-                education::setMastersDegree
-        );
+        // TECHNICAL SKILLS
+        if (request.getTechnicalSkills() != null && !request.getTechnicalSkills().isEmpty()) {
 
-        setIfNotNull(
-                request.getMastersSpecialization(),
-                education::setMastersSpecialization
-        );
+            Candidate candidate = education.getCandidate();
 
-        setIfNotNull(
-                request.getMastersCollege(),
-                education::setMastersCollege
-        );
+            if (candidate != null) {
+                candidate.setTechnicalSkills(request.getTechnicalSkills());
+                candidateRepository.save(candidate);
+            }
+        }
+    }
 
-        setIfNotNull(
-                request.getMastersUniversity(),
-                education::setMastersUniversity
-        );
+    private void setManualString(String value, Consumer<String> setter) {
 
-        setIfNotNull(
-                request.getMastersRegistrationNumber(),
-                education::setMastersRegistrationNumber
-        );
+        if (value == null) {
+            return;
+        }
 
-        setIfNotNull(
-                request.getModeOfStudy(),
-                education::setModeOfStudy
-        );
+        String cleaned = value.trim();
 
-        setIfNotNull(
-                request.getMastersStartYear(),
-                education::setMastersStartYear
-        );
+        // Ignore Swagger/OpenAPI placeholder values.
+        if (cleaned.isBlank()
+                || cleaned.equalsIgnoreCase("string")
+                || cleaned.equalsIgnoreCase("null")) {
+            return;
+        }
 
-        setIfNotNull(
-                request.getMastersEndYear(),
-                education::setMastersEndYear
-        );
+        setter.accept(cleaned);
+    }
 
-        setIfNotNull(
-                request.getMastersPercentage(),
-                education::setMastersPercentage
-        );
+    private void setManualYear(Integer value, Consumer<Integer> setter) {
 
-        // ========================================================
-        // 10TH DOCUMENT
-        // ========================================================
+        if (value == null) {
+            return;
+        }
 
-        if (request.getTenthMarksCard() != null &&
-                !request.getTenthMarksCard().isEmpty()) {
+        // Ignore Swagger's default 0.
+        if (value >= 1900 && value <= 2100) {
+            setter.accept(value);
+        }
+    }
+
+    private void setManualPercentage(Double value, Consumer<Double> setter) {
+
+        if (value == null) {
+            return;
+        }
+
+        // Ignore Swagger's default 0.1 and invalid values.
+        if (value > 0.1 && value <= 100.0) {
+            setter.accept(value);
+        }
+    }
+
+    // ============================================================
+    // MAP REQUEST + OCR -> ENTITY
+    // ============================================================
+
+    private void mapRequestToEntity(Education education, EducationRequest request) throws IOException {
+
+        if (request == null) {
+            throw new BadRequestException("Education request is required.");
+        }
+
+        /*
+         * IMPORTANT:
+         * 1. Upload document
+         * 2. OCR extracts available values (AWS Textract)
+         * 3. Missing values stay unchanged/empty
+         * 4. Manual values (applyManualValues) override OCR, applied last
+         */
+
+        // 10TH MARKS CARD
+        if (request.getTenthMarksCard() != null && !request.getTenthMarksCard().isEmpty()) {
 
             saveFile(
                     request.getTenthMarksCard(),
@@ -1533,23 +1237,12 @@ public class EducationServiceImpl implements EducationService {
                     education::setTenthMarksCardContentType
             );
 
-            String text =
-                    extractTextFromFile(
-                            request.getTenthMarksCard()
-                    );
-
-            extractTenthData(
-                    education,
-                    text
-            );
+            String text = extractTextFromFile(request.getTenthMarksCard());
+            extractTenthData(education, text);
         }
 
-        // ========================================================
-        // 12TH DOCUMENT
-        // ========================================================
-
-        if (request.getTwelfthMarksCard() != null &&
-                !request.getTwelfthMarksCard().isEmpty()) {
+        // 12TH MARKS CARD
+        if (request.getTwelfthMarksCard() != null && !request.getTwelfthMarksCard().isEmpty()) {
 
             saveFile(
                     request.getTwelfthMarksCard(),
@@ -1558,23 +1251,12 @@ public class EducationServiceImpl implements EducationService {
                     education::setTwelfthMarksCardContentType
             );
 
-            String text =
-                    extractTextFromFile(
-                            request.getTwelfthMarksCard()
-                    );
-
-            extractTwelfthData(
-                    education,
-                    text
-            );
+            String text = extractTextFromFile(request.getTwelfthMarksCard());
+            extractTwelfthData(education, text);
         }
 
-        // ========================================================
         // DEGREE CERTIFICATE
-        // ========================================================
-
-        if (request.getDegreeCertificate() != null &&
-                !request.getDegreeCertificate().isEmpty()) {
+        if (request.getDegreeCertificate() != null && !request.getDegreeCertificate().isEmpty()) {
 
             saveFile(
                     request.getDegreeCertificate(),
@@ -1583,48 +1265,13 @@ public class EducationServiceImpl implements EducationService {
                     education::setDegreeCertificateContentType
             );
 
-            String text =
-                    extractTextFromFile(
-                            request.getDegreeCertificate()
-                    );
-
-            extractDegreeData(
-                    education,
-                    text
-            );
+            String text = extractTextFromFile(request.getDegreeCertificate());
+            extractDegreeData(education, text);
         }
 
-        // ========================================================
-        // MASTER'S MARKS CARD
-        // ========================================================
-
-        if (request.getMastersMarksCard() != null &&
-                !request.getMastersMarksCard().isEmpty()) {
-
-            saveFile(
-                    request.getMastersMarksCard(),
-                    education::setMastersMarksCard,
-                    education::setMastersMarksCardName,
-                    education::setMastersMarksCardContentType
-            );
-
-            String text =
-                    extractTextFromFile(
-                            request.getMastersMarksCard()
-                    );
-
-            extractMastersData(
-                    education,
-                    text
-            );
-        }
-
-        // ========================================================
         // MASTER'S DEGREE CERTIFICATE
-        // ========================================================
-
-        if (request.getMastersDegreeCertificate() != null &&
-                !request.getMastersDegreeCertificate().isEmpty()) {
+        if (request.getMastersDegreeCertificate() != null
+                && !request.getMastersDegreeCertificate().isEmpty()) {
 
             saveFile(
                     request.getMastersDegreeCertificate(),
@@ -1633,33 +1280,12 @@ public class EducationServiceImpl implements EducationService {
                     education::setMastersDegreeCertificateContentType
             );
 
-            String text =
-                    extractTextFromFile(
-                            request.getMastersDegreeCertificate()
-                    );
-
-            extractMastersData(
-                    education,
-                    text
-            );
+            String text = extractTextFromFile(request.getMastersDegreeCertificate());
+            extractMastersData(education, text);
         }
 
-        // ========================================================
-        // TECHNICAL SKILLS
-        // ========================================================
-
-        Candidate candidate =
-                education.getCandidate();
-
-        if (candidate != null &&
-                request.getTechnicalSkills() != null) {
-
-            candidate.setTechnicalSkills(
-                    request.getTechnicalSkills()
-            );
-
-            candidateRepository.save(candidate);
-        }
+        // MANUAL VALUES OVERRIDE OCR - applied last
+        applyManualValues(education, request);
     }
 
     // ============================================================
@@ -1667,56 +1293,33 @@ public class EducationServiceImpl implements EducationService {
     // ============================================================
 
     @Override
-    public EducationResponse saveEducation(
-            EducationRequest request) {
+    public EducationResponse saveEducation(EducationRequest request) {
 
         try {
 
-            Candidate candidate =
-                    getLoggedInCandidate();
+            Candidate candidate = getLoggedInCandidate();
 
-            if (educationRepository
-                    .existsByCandidate(candidate)) {
-
-                throw new BadRequestException(
-                        "Education details already exist."
-                );
+            if (educationRepository.existsByCandidate(candidate)) {
+                throw new BadRequestException("Education details already exist.");
             }
 
-            Education education =
-                    new Education();
-
+            Education education = new Education();
             education.setCandidate(candidate);
 
-            mapRequestToEntity(
-                    education,
-                    request
-            );
+            mapRequestToEntity(education, request);
 
-            Education savedEducation =
-                    educationRepository.save(
-                            education
-                    );
+            Education savedEducation = educationRepository.save(education);
 
-            return mapToResponse(
-                    savedEducation
-            );
+            log.info("Education details saved for candidate {}", candidate.getId());
+
+            return mapToResponse(savedEducation);
 
         } catch (BadRequestException ex) {
-
             throw ex;
 
         } catch (IOException ex) {
-
-            log.error(
-                    "Failed to save education documents.",
-                    ex
-            );
-
-            throw new RuntimeException(
-                    "Unable to save education documents.",
-                    ex
-            );
+            log.error("Failed to save education documents.", ex);
+            throw new RuntimeException("Unable to save education documents.", ex);
         }
     }
 
@@ -1725,52 +1328,28 @@ public class EducationServiceImpl implements EducationService {
     // ============================================================
 
     @Override
-    public EducationResponse updateEducation(
-            EducationRequest request) {
+    public EducationResponse updateEducation(EducationRequest request) {
 
         try {
 
-            Candidate candidate =
-                    getLoggedInCandidate();
+            Candidate candidate = getLoggedInCandidate();
 
-            Education education =
-                    educationRepository
-                            .findByCandidate(candidate)
-                            .orElseThrow(() ->
-                                    new ResourceNotFoundException(
-                                            "Education details not found."
-                                    )
-                            );
+            Education education = educationRepository
+                    .findByCandidateId(candidate.getId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Education details not found."));
 
-            mapRequestToEntity(
-                    education,
-                    request
-            );
+            mapRequestToEntity(education, request);
 
-            Education updatedEducation =
-                    educationRepository.save(
-                            education
-                    );
+            Education updatedEducation = educationRepository.save(education);
 
-            return mapToResponse(
-                    updatedEducation
-            );
+            return mapToResponse(updatedEducation);
 
         } catch (BadRequestException ex) {
-
             throw ex;
 
         } catch (IOException ex) {
-
-            log.error(
-                    "Failed to update education documents.",
-                    ex
-            );
-
-            throw new RuntimeException(
-                    "Unable to update education documents.",
-                    ex
-            );
+            log.error("Failed to update education documents.", ex);
+            throw new RuntimeException("Unable to update education documents.", ex);
         }
     }
 
@@ -1781,21 +1360,13 @@ public class EducationServiceImpl implements EducationService {
     @Override
     public EducationResponse getMyEducation() {
 
-        Candidate candidate =
-                getLoggedInCandidate();
+        Candidate candidate = getLoggedInCandidate();
 
-        Education education =
-                educationRepository
-                        .findByCandidate(candidate)
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Education details not found."
-                                )
-                        );
+        Education education = educationRepository
+                .findByCandidateId(candidate.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Education details not found."));
 
-        return mapToResponse(
-                education
-        );
+        return mapToResponse(education);
     }
 
     // ============================================================
@@ -1803,28 +1374,17 @@ public class EducationServiceImpl implements EducationService {
     // ============================================================
 
     @Override
-    public EducationResponse getEducationByCandidateId(
-            Long candidateId) {
+    public EducationResponse getEducationByCandidateId(Long candidateId) {
 
         if (candidateId == null) {
-
-            throw new BadRequestException(
-                    "Candidate ID is required."
-            );
+            throw new BadRequestException("Candidate ID is required.");
         }
 
-        Education education =
-                educationRepository
-                        .findByCandidateId(candidateId)
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Education details not found."
-                                )
-                        );
+        Education education = educationRepository
+                .findByCandidateId(candidateId)
+                .orElseThrow(() -> new ResourceNotFoundException("Education details not found."));
 
-        return mapToResponse(
-                education
-        );
+        return mapToResponse(education);
     }
 
     // ============================================================
@@ -1832,90 +1392,61 @@ public class EducationServiceImpl implements EducationService {
     // ============================================================
 
     @Override
-    public Resource viewDocument(
-            Long educationId,
-            EducationDocumentType documentType) {
+    public Resource viewDocument(Long educationId, EducationDocumentType documentType) {
 
         if (educationId == null) {
-
-            throw new BadRequestException(
-                    "Education ID is required."
-            );
+            throw new BadRequestException("Education ID is required.");
         }
 
         if (documentType == null) {
-
-            throw new BadRequestException(
-                    "Document type is required."
-            );
+            throw new BadRequestException("Document type is required.");
         }
 
-        Education education =
-                educationRepository
-                        .findById(educationId)
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Education details not found."
-                                )
-                        );
+        Education education = educationRepository
+                .findById(educationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Education details not found."));
 
         byte[] fileData;
 
         switch (documentType) {
 
             case TENTH_MARKS_CARD:
-
-                fileData =
-                        education.getTenthMarksCard();
-
+                fileData = education.getTenthMarksCard();
                 break;
 
             case TWELFTH_MARKS_CARD:
-
-                fileData =
-                        education.getTwelfthMarksCard();
-
+                fileData = education.getTwelfthMarksCard();
                 break;
 
             case DEGREE_CERTIFICATE:
-
-                fileData =
-                        education.getDegreeCertificate();
-
-                break;
-
-            case MASTERS_MARKS_CARD:
-
-                fileData =
-                        education.getMastersMarksCard();
-
+                fileData = education.getDegreeCertificate();
                 break;
 
             case MASTERS_DEGREE_CERTIFICATE:
-
-                fileData =
-                        education.getMastersDegreeCertificate();
-
+                fileData = education.getMastersDegreeCertificate();
                 break;
 
             default:
-
-                throw new BadRequestException(
-                        "Invalid education document type."
-                );
+                throw new BadRequestException("Invalid education document type.");
         }
 
-        if (fileData == null ||
-                fileData.length == 0) {
-
-            throw new ResourceNotFoundException(
-                    "Document not found."
-            );
+        if (fileData == null || fileData.length == 0) {
+            throw new ResourceNotFoundException("Document not found.");
         }
 
-        return new ByteArrayResource(
-                fileData
-        );
+        return new ByteArrayResource(fileData);
+    }
+
+    // ============================================================
+    // GET MY TECHNICAL SKILLS - DO NOT REMOVE
+    // ============================================================
+
+    @Override
+    public List<TechnicalSkill> getMyTechnicalSkills() {
+
+        Candidate candidate = getLoggedInCandidate();
+
+        return candidate.getTechnicalSkills();
     }
 
     // ============================================================
@@ -1925,41 +1456,13 @@ public class EducationServiceImpl implements EducationService {
     @Override
     public void deleteEducation() {
 
-        Candidate candidate =
-                getLoggedInCandidate();
+        Candidate candidate = getLoggedInCandidate();
 
-        Education education =
-                educationRepository
-                        .findByCandidate(candidate)
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Education details not found."
-                                )
-                        );
+        Education education = educationRepository
+                .findByCandidateId(candidate.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Education details not found."));
 
-        educationRepository.delete(
-                education
-        );
-    }
-
-    // ============================================================
-    // GET TECHNICAL SKILLS
-    // ============================================================
-
-    @Override
-    public List<TechnicalSkill> getMyTechnicalSkills() {
-
-        Candidate candidate =
-                getLoggedInCandidate();
-
-        if (candidate.getTechnicalSkills() == null) {
-
-            return List.of();
-        }
-
-        return new ArrayList<>(
-                candidate.getTechnicalSkills()
-        );
+        educationRepository.delete(education);
     }
 
     // ============================================================
@@ -1967,94 +1470,52 @@ public class EducationServiceImpl implements EducationService {
     // ============================================================
 
     @Override
-    public String extractEducationText(
-            MultipartFile file) {
+    public String extractEducationText(MultipartFile file) {
 
         return extractTextFromFile(file);
     }
 
     // ============================================================
     // EXTRACT AND POPULATE EDUCATION
-    //
-    // THIS IS THE METHOD FROM YOUR INTERFACE
     // ============================================================
 
     @Override
-    public EducationResponse extractAndPopulateEducation(
-            EducationRequest request) {
+    public EducationResponse extractAndPopulateEducation(EducationRequest request) {
 
         if (request == null) {
-
-            throw new BadRequestException(
-                    "Education request is required."
-            );
+            throw new BadRequestException("Education request is required.");
         }
 
         try {
 
-            /*
-             * We directly use mapRequestToEntity().
-             *
-             * It:
-             * 1. Accepts manually supplied fields.
-             * 2. Saves uploaded documents.
-             * 3. Sends documents to Textract.
-             * 4. Extracts OCR information.
-             * 5. Populates the Education entity.
-             */
+            Candidate candidate = getLoggedInCandidate();
 
-            Candidate candidate =
-                    getLoggedInCandidate();
-
-            Education education =
-                    educationRepository
-                            .findByCandidate(candidate)
-                            .orElse(null);
+            Education education = educationRepository
+                    .findByCandidateId(candidate.getId())
+                    .orElse(null);
 
             if (education == null) {
-
-                education =
-                        new Education();
-
-                education.setCandidate(
-                        candidate
-                );
+                education = new Education();
+                education.setCandidate(candidate);
             }
 
-            mapRequestToEntity(
-                    education,
-                    request
-            );
+            mapRequestToEntity(education, request);
 
-            Education savedEducation =
-                    educationRepository.save(
-                            education
-                    );
+            Education savedEducation = educationRepository.save(education);
 
             log.info(
                     "Education extracted and populated successfully for candidate {}",
                     candidate.getId()
             );
 
-            return mapToResponse(
-                    savedEducation
-            );
+            return mapToResponse(savedEducation);
 
         } catch (BadRequestException ex) {
-
             throw ex;
 
         } catch (IOException ex) {
-
-            log.error(
-                    "Failed to extract and populate education.",
-                    ex
-            );
-
-            throw new RuntimeException(
-                    "Unable to process education documents.",
-                    ex
-            );
+            log.error("Failed to extract and populate education.", ex);
+            throw new RuntimeException("Unable to process education documents.", ex);
         }
     }
 }

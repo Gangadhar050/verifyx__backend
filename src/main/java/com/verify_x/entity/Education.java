@@ -1,14 +1,11 @@
 package com.verify_x.entity;
 
-import com.verify_x.enums.*;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.Set;
 
 @Entity
 @Table(name = "education_details")
@@ -23,14 +20,26 @@ public class Education {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // =========================================================
+    // CANDIDATE
+    // =========================================================
+
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "candidate_id", nullable = false, unique = true)
+    @JoinColumn(
+            name = "candidate_id",
+            nullable = false,
+            unique = true
+    )
     private Candidate candidate;
+
+
+    // =========================================================
+    // 10TH / SSLC
+    // =========================================================
 
     private String tenthSchoolName;
 
-    @Enumerated(EnumType.STRING)
-    private BoardType tenthBoard;
+    private String tenthBoard;
 
     private String tenthSchoolLocation;
 
@@ -39,7 +48,6 @@ public class Education {
     private Integer tenthPassingYear;
 
     private Double tenthPercentage;
-
 
     private String tenthMarksCardName;
 
@@ -50,19 +58,21 @@ public class Education {
     private byte[] tenthMarksCard;
 
 
+    // =========================================================
+    // 12TH / PUC
+    // =========================================================
+
     private String twelfthInstitutionName;
 
-    private String twelfthBoardUniversity;
+    private String twelfthLocation;
 
-    @Enumerated(EnumType.STRING)
-    private StreamType twelfthStream;
+    private String twelfthBoardUniversity;
 
     private String twelfthRegistrationNumber;
 
     private Integer twelfthPassingYear;
 
     private Double twelfthPercentage;
-
 
     private String twelfthMarksCardName;
 
@@ -72,6 +82,11 @@ public class Education {
     @Column(columnDefinition = "LONGBLOB")
     private byte[] twelfthMarksCard;
 
+
+    // =========================================================
+    // DEGREE / BACHELOR'S
+    // =========================================================
+
     private String degreeName;
 
     private String specialization;
@@ -79,6 +94,8 @@ public class Education {
     private String collegeName;
 
     private String universityName;
+
+    private String degreeLocation;
 
     private String usnNumber;
 
@@ -88,10 +105,6 @@ public class Education {
 
     private Double degreePercentage;
 
-    @Enumerated(EnumType.STRING)
-    private BacklogStatus backlogStatus;
-
-
     private String degreeCertificateName;
 
     private String degreeCertificateContentType;
@@ -99,6 +112,13 @@ public class Education {
     @Lob
     @Column(columnDefinition = "LONGBLOB")
     private byte[] degreeCertificate;
+
+
+    // =========================================================
+    // MASTER'S
+    // OPTIONAL
+    // ONLY DEGREE CERTIFICATE
+    // =========================================================
 
     @Column(nullable = true)
     private String mastersDegree;
@@ -113,10 +133,10 @@ public class Education {
     private String mastersUniversity;
 
     @Column(nullable = true)
-    private String mastersRegistrationNumber;
+    private String mastersLocation;
 
-    @Enumerated(EnumType.STRING)
-    private ModeOfStudy modeOfStudy;
+    @Column(nullable = true)
+    private String mastersRegistrationNumber;
 
     @Column(nullable = true)
     private Integer mastersStartYear;
@@ -128,36 +148,23 @@ public class Education {
     private Double mastersPercentage;
 
     @Column(nullable = true)
-    private String mastersMarksCardName;
-
-    @Column(nullable = true)
-    private String mastersMarksCardContentType;
-
-    @Lob
-    @Column(columnDefinition = "LONGBLOB",nullable = true)
-    private byte[] mastersMarksCard;
-
-    @Column(nullable = true)
     private String mastersDegreeCertificateName;
 
     @Column(nullable = true)
     private String mastersDegreeCertificateContentType;
 
     @Lob
-    @Column(columnDefinition = "LONGBLOB",nullable = true)
+    @Column(
+            columnDefinition = "LONGBLOB",
+            nullable = true
+    )
     private byte[] mastersDegreeCertificate;
 
 
-//    @ElementCollection(fetch = FetchType.LAZY)
-//    @CollectionTable(
-//            name = "education_technical_skills",
-//            joinColumns = @JoinColumn(name = "education_id")
-//    )
-//    @Enumerated(EnumType.STRING)
-//    @Column(name = "technical_skill")
-//    @Builder.Default
-//    private Set<TechnicalSkill> technicalSkills = new HashSet<>();
-//
+    // =========================================================
+    // TIMESTAMPS
+    // =========================================================
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 

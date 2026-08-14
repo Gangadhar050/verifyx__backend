@@ -8,8 +8,6 @@ public enum EducationDocumentType {
 
     DEGREE_CERTIFICATE,
 
-    MASTERS_MARKS_CARD,
-
     MASTERS_DEGREE_CERTIFICATE
 
 }

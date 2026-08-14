@@ -1,10 +1,10 @@
-package com.verify_x.enums;
-
-public enum BoardType {
-
-    CBSE,
-    ICSE,
-    STATE_BOARD,
-    OTHER
-
-}
+//package com.verify_x.enums;
+//
+//public enum BoardType {
+//
+//    CBSE,
+//    ICSE,
+//    STATE_BOARD,
+//    OTHER
+//
+//}

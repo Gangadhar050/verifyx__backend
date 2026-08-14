@@ -1,7 +1,10 @@
 package com.verify_x.dto;
 
-import com.verify_x.enums.*;
-import lombok.*;
+import com.verify_x.enums.TechnicalSkill;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.List;
 
@@ -13,62 +16,100 @@ public class EducationResponse {
 
     private Long id;
 
-    // ---------- 10th ----------
+
+    // =========================================================
+    // 10TH / SSLC
+    // =========================================================
 
     private String tenthSchoolName;
-    private BoardType tenthBoard;
+
+    private String tenthBoard;
+
     private String tenthSchoolLocation;
+
     private String tenthRollNumber;
+
     private Integer tenthPassingYear;
+
     private Double tenthPercentage;
 
     private String tenthMarksCardName;
 
-    // ---------- 12th ----------
+
+    // =========================================================
+    // 12TH / PUC
+    // =========================================================
 
     private String twelfthInstitutionName;
+
+    private String twelfthLocation;
+
     private String twelfthBoardUniversity;
-    private StreamType twelfthStream;
+
     private String twelfthRegistrationNumber;
+
     private Integer twelfthPassingYear;
+
     private Double twelfthPercentage;
 
     private String twelfthMarksCardName;
 
-    // ---------- Degree ----------
+
+    // =========================================================
+    // DEGREE / BACHELOR'S
+    // =========================================================
 
     private String degreeName;
-    private String specialization;
-    private String collegeName;
-    private String universityName;
-    private String usnNumber;
-    private Integer degreeStartYear;
-    private Integer degreeEndYear;
-    private Double degreePercentage;
 
-    private BacklogStatus backlogStatus;
+    private String specialization;
+
+    private String collegeName;
+
+    private String universityName;
+
+    private String degreeLocation;
+
+    private String usnNumber;
+
+    private Integer degreeStartYear;
+
+    private Integer degreeEndYear;
+
+    private Double degreePercentage;
 
     private String degreeCertificateName;
 
-    // ---------- Master's ----------
+
+    // =========================================================
+    // MASTER'S
+    // OPTIONAL
+    // =========================================================
 
     private String mastersDegree;
+
     private String mastersSpecialization;
+
     private String mastersCollege;
+
     private String mastersUniversity;
+
+    private String mastersLocation;
+
     private String mastersRegistrationNumber;
 
-    private ModeOfStudy modeOfStudy;
-
     private Integer mastersStartYear;
-    private Integer mastersEndYear;
-    private Double mastersPercentage;
 
-    private String mastersMarksCardName;
+    private Integer mastersEndYear;
+
+    private Double mastersPercentage;
 
     private String mastersDegreeCertificateName;
 
-    //Skills
+
+    // =========================================================
+    // TECHNICAL SKILLS
+    // Stored in Candidate entity
+    // =========================================================
 
     private List<TechnicalSkill> technicalSkills;
 }

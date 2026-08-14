@@ -1,11 +1,11 @@
-package com.verify_x.enums;
-
-public enum StreamType {
-
-    SCIENCE,
-    COMMERCE,
-    ARTS,
-    DIPLOMA,
-    OTHER
-
-}
+//package com.verify_x.enums;
+//
+//public enum StreamType {
+//
+//    SCIENCE,
+//    COMMERCE,
+//    ARTS,
+//    DIPLOMA,
+//    OTHER
+//
+//}
