@@ -5,7 +5,6 @@ import com.verify_x.enums.CandidateType;
 import com.verify_x.enums.Role;
 import com.verify_x.enums.TechnicalSkill;
 import com.verify_x.enums.ToolPlatform;
-
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -125,6 +124,8 @@ public class Candidate {
     @Builder.Default
     private List<TechnicalSkill> technicalSkills = new ArrayList<>();
 
+    
+    
     // =========================================================
     // TOOLS & PLATFORMS
     // =========================================================

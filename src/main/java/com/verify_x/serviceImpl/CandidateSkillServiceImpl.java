@@ -106,6 +106,8 @@ public class CandidateSkillServiceImpl implements CandidateSkillService {
 
      return getTechnicalSkills();
  }
+ 
+ 
  // =========================================================
  // REMOVE SINGLE TECHNICAL SKILL
  // =========================================================
@@ -320,15 +322,24 @@ public class CandidateSkillServiceImpl implements CandidateSkillService {
                     );
 
             case JAVA_DEVELOPER ->
-                    List.of(
-                            TechnicalSkill.JAVA,
-                            TechnicalSkill.SPRING_BOOT,
-                            TechnicalSkill.SQL,
-                            TechnicalSkill.MYSQL,
-                            TechnicalSkill.ORACLE,
-                            TechnicalSkill.GIT,
-                            TechnicalSkill.DOCKER
-                    );
+            List.of(
+                    TechnicalSkill.JAVA,
+                    TechnicalSkill.SPRING,
+                    TechnicalSkill.SPRING_BOOT,
+                    TechnicalSkill.SPRING_MVC,
+                    TechnicalSkill.SPRING_SECURITY,
+                    TechnicalSkill.HIBERNATE,
+                    TechnicalSkill.JPA,
+                    TechnicalSkill.SQL,
+                    TechnicalSkill.MYSQL,
+                    TechnicalSkill.ORACLE,
+                    TechnicalSkill.MAVEN,
+                    TechnicalSkill.GIT,
+                    TechnicalSkill.DOCKER,
+                    TechnicalSkill.REST_API,
+                    TechnicalSkill.JUNIT,
+                    TechnicalSkill.MOCKITO
+            );
 
             case SPRING_BOOT_DEVELOPER ->
                     List.of(
